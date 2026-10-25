@@ -29,6 +29,44 @@ body::before {
 }
 .shell { width: min(920px, calc(100% - 36px)); margin: 0 auto; padding: 58px 0 80px; }
 .loading { color: var(--muted); }
+.loading-skeleton { display: block; }
+.skeleton-block { display: block; overflow: hidden; border-radius: 7px; background: linear-gradient(100deg, #1a211d 20%, #29342d 38%, #1a211d 58%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite; }
+@keyframes skeleton-shimmer { to { background-position-x: -200%; } }
+.skeleton-eyebrow { width: 176px; height: 12px; }
+.skeleton-account { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 26px 0 34px; }
+.skeleton-account-name { width: 190px; height: 16px; }
+.skeleton-account-button { width: 76px; height: 34px; border-radius: 999px; }
+.skeleton-tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 1px solid var(--line); }
+.skeleton-tab { width: 92px; height: 39px; border-radius: 5px 5px 0 0; }
+.skeleton-heading { width: min(68%, 520px); height: clamp(44px, 7vw, 78px); margin: 0 0 22px; }
+.skeleton-lead { width: min(78%, 590px); height: 18px; margin-bottom: 12px; }
+.skeleton-lead::after { display: block; width: 72%; height: 18px; margin-top: 10px; border-radius: inherit; background: inherit; content: ''; }
+.skeleton-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.skeleton-card { min-height: 190px; padding: 22px; border: 1px solid var(--line); background: linear-gradient(145deg, rgba(29,36,32,.7), rgba(17,21,19,.8)); }
+.skeleton-card-label { width: 46%; height: 11px; margin-bottom: 24px; }
+.skeleton-card-title { width: 72%; height: 24px; margin-bottom: 18px; }
+.skeleton-card-line { width: 92%; height: 12px; margin-top: 10px; }
+.skeleton-card-line.short { width: 58%; }
+.skeleton-card-value { width: 40%; height: 48px; margin: 32px 0 14px; }
+.skeleton-difficulty-section { margin-top: 34px; }
+.skeleton-section-heading { width: 210px; height: 24px; margin-top: 34px; }
+.skeleton-meta { display: flex; gap: 12px; margin: 24px 0 32px; }
+.skeleton-meta-item { width: 118px; height: 36px; border-radius: 999px; }
+.skeleton-question { margin: 18px 0; padding: 28px; border: 1px solid var(--line); background: linear-gradient(135deg, rgba(29,36,32,.7), rgba(17,21,19,.8)); }
+.skeleton-question-label { width: 180px; height: 11px; margin-bottom: 18px; }
+.skeleton-question-title { width: 74%; height: 28px; margin-bottom: 18px; }
+.skeleton-question-line { width: 52%; height: 13px; margin-bottom: 22px; }
+.skeleton-option { width: 100%; height: 48px; margin-top: 10px; }
+.skeleton-statistics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 32px 0; }
+.skeleton-stat-card { display: grid; gap: 14px; padding: 22px; border: 1px solid var(--line); background: var(--panel); }
+.skeleton-stat-label { width: 52%; height: 13px; }
+.skeleton-stat-value { width: 38%; height: 40px; }
+.skeleton-stat-line { width: 68%; height: 12px; }
+.skeleton-table { margin-top: 14px; border-top: 1px solid var(--line); }
+.skeleton-table-row { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 18px; padding: 16px 12px; border-bottom: 1px solid var(--line); }
+.skeleton-table-cell { height: 13px; }
+.skeleton-table-cell.wide { width: 85%; }
+@media (prefers-reduced-motion: reduce) { .skeleton-block { animation: none; } }
 .eyebrow { margin: 0 0 18px; color: var(--accent); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .14em; text-transform: uppercase; }
 h1 { max-width: 680px; margin: 0; font-size: clamp(42px, 7vw, 78px); line-height: .95; font-weight: 400; letter-spacing: -2px; }
 .lead { max-width: 590px; margin: 23px 0 35px; color: var(--muted); font-size: 19px; line-height: 1.5; }
@@ -149,5 +187,5 @@ textarea:focus, .code-editor:focus { border-color: var(--accent); }
 .review-item.is-wrong .review-title strong { color: var(--orange); }
 .review-item span { color: var(--ink); white-space: pre-wrap; }
 .error { color: var(--error); }
-@media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards, .skeleton-grid, .skeleton-statistics { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .shell { width: min(100% - 24px, 920px); padding-top: 35px; } .question { padding: 20px; } .test-progress { align-items: stretch; flex-direction: column; gap: 10px; } }

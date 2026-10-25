@@ -11,6 +11,54 @@ const TEST_DURATION_SECONDS = 20 * 60;
 
 const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
 
+function skeletonBlock(className = '') {
+  return `<span class="skeleton-block ${className}" aria-hidden="true"></span>`;
+}
+
+function renderLoadingSkeleton(type) {
+  const header = `<p class="eyebrow">${skeletonBlock('skeleton-eyebrow')}</p>
+    <div class="skeleton-account">${skeletonBlock('skeleton-account-name')}${skeletonBlock('skeleton-account-button')}</div>
+    <div class="skeleton-tabs">${skeletonBlock('skeleton-tab')}${skeletonBlock('skeleton-tab')}${skeletonBlock('skeleton-tab')}</div>`;
+  let content;
+
+  if (type === 'test') {
+    content = `${skeletonBlock('skeleton-heading')}
+      <div class="skeleton-meta">${skeletonBlock('skeleton-meta-item')}${skeletonBlock('skeleton-meta-item')}${skeletonBlock('skeleton-meta-item')}</div>
+      ${Array.from({ length: 3 }, () => `<section class="skeleton-question">
+        ${skeletonBlock('skeleton-question-label')}${skeletonBlock('skeleton-question-title')}
+        ${skeletonBlock('skeleton-question-line')}${skeletonBlock('skeleton-option')}${skeletonBlock('skeleton-option')}${skeletonBlock('skeleton-option')}
+      </section>`).join('')}`;
+  } else if (type === 'theory') {
+    content = `${skeletonBlock('skeleton-heading')}${skeletonBlock('skeleton-lead')}
+      <div class="skeleton-grid">${Array.from({ length: 6 }, () => `<div class="skeleton-card">
+        ${skeletonBlock('skeleton-card-label')}${skeletonBlock('skeleton-card-title')}
+        ${skeletonBlock('skeleton-card-line')}${skeletonBlock('skeleton-card-line short')}
+      </div>`).join('')}</div>`;
+  } else if (type === 'statistics') {
+    content = `${skeletonBlock('skeleton-heading')}${skeletonBlock('skeleton-lead')}
+      <div class="skeleton-statistics">${Array.from({ length: 2 }, () => `<div class="skeleton-stat-card">
+        ${skeletonBlock('skeleton-stat-label')}${skeletonBlock('skeleton-stat-value')}${skeletonBlock('skeleton-stat-line')}
+      </div>`).join('')}</div>
+      ${skeletonBlock('skeleton-section-heading')}
+      <div class="skeleton-table">${Array.from({ length: 4 }, () => `<div class="skeleton-table-row">
+        ${skeletonBlock('skeleton-table-cell')}${skeletonBlock('skeleton-table-cell wide')}${skeletonBlock('skeleton-table-cell')}
+      </div>`).join('')}</div>`;
+  } else {
+    content = `${skeletonBlock('skeleton-heading')}${skeletonBlock('skeleton-lead')}
+      ${Array.from({ length: 3 }, () => `<section class="skeleton-difficulty-section">
+        ${skeletonBlock('skeleton-section-heading')}
+        <div class="skeleton-grid">${Array.from({ length: 3 }, () => `<div class="skeleton-card">
+          ${skeletonBlock('skeleton-card-label')}${skeletonBlock('skeleton-card-value')}
+          ${skeletonBlock('skeleton-card-line')}${skeletonBlock('skeleton-card-line short')}
+        </div>`).join('')}</div>
+      </section>`).join('')}`;
+  }
+
+  app.innerHTML = `<div class="loading-skeleton" role="status" aria-label="Загрузка содержимого" aria-busy="true">
+    ${header}${content}
+  </div>`;
+}
+
 function questionTemplate(question, index) {
   const isWritten = question.question_type === 'written';
   const inputType = question.question_type === 'single' ? 'radio' : 'checkbox';
@@ -263,7 +311,7 @@ async function loadStatisticsData() {
 }
 
 async function loadTheoryIndex() {
-  app.innerHTML = '<p class="loading">Загружаем материалы...</p>';
+  renderLoadingSkeleton('theory');
   try {
     await loadStatisticsData();
     renderTheoryIndex();
@@ -348,7 +396,7 @@ function renderTheoryArticle(article) {
 }
 
 async function loadStatistics() {
-  app.innerHTML = '<p class="loading">Загружаем статистику...</p>';
+  renderLoadingSkeleton('statistics');
   try {
     await loadStatisticsData();
     renderStatistics();
@@ -452,22 +500,25 @@ async function loadDifficulties(subject = selectedSubject) {
   const subjects = ['python', 'fastapi', 'aiogram', 'threading', 'multiprocessing', 'asyncio', 'generator', 'decorator', 'regex', 'pandas', 'unittest', 'pytest', 'linters', 'files_formats', 'databases'];
   const params = new URLSearchParams();
   subjects.forEach((id) => params.append('subjects', id));
-  const response = await fetch(`/api/difficulties/batch?${params}`);
-  if (!response.ok) {
-    renderAuth('login', 'Не удалось загрузить уровни сложности.');
-    return;
+  renderLoadingSkeleton('workspace');
+  try {
+    const response = await fetch(`/api/difficulties/batch?${params}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || 'Не удалось загрузить уровни сложности.');
+    renderDifficultySelection(
+      ...subjects.map((id) => data.difficulties[id]),
+    );
+  } catch (error) {
+    app.innerHTML = `<p class="error">${escapeHtml(error.message || 'Не удалось загрузить уровни сложности.')}</p><button class="auth-switch" id="retry-button">Повторить</button>`;
+    document.querySelector('#retry-button').addEventListener('click', () => loadDifficulties(subject));
   }
-  const data = await response.json();
-  renderDifficultySelection(
-    ...subjects.map((id) => data.difficulties[id]),
-  );
 }
 
 async function loadTest(difficulty, subject = selectedSubject) {
   selectedDifficulty = difficulty;
   selectedSubject = subject;
   answers.clear();
-  app.innerHTML = '<p class="loading">Подбираем 20 вопросов...</p>';
+  renderLoadingSkeleton('test');
   try {
     const response = await fetch(`/api/test?difficulty=${encodeURIComponent(difficulty)}&subject=${encodeURIComponent(subject)}`);
     const result = await response.json();
@@ -553,6 +604,7 @@ async function submitTest(event, timedOut = false) {
   }
 }
 
+renderLoadingSkeleton('workspace');
 fetch('/api/auth/me').then(async (response) => {
   if (!response.ok) { renderAuth(); return; }
   currentUser = await response.json();
