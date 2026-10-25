@@ -190,6 +190,43 @@ def test_register_rejects_duplicate_accounts(
     assert response.status_code == expected_status
 
 
+@pytest.mark.parametrize("username", ["   ", "  ab  "])
+def test_register_rejects_username_shorter_than_three_after_trimming(
+    test_client: TestClient,
+    username: str,
+) -> None:
+    response = test_client.post(
+        "/api/auth/register",
+        json={
+            "username": username,
+            "email": "learner@example.test",
+            "password": "correct-horse-battery",
+        },
+    )
+
+    assert response.status_code == 422
+    assert test_client.cookies.get("session_token") is None
+
+
+def test_register_trims_username_and_normalizes_email(test_client: TestClient) -> None:
+    response = test_client.post(
+        "/api/auth/register",
+        json={
+            "username": "  learner  ",
+            "email": " LEARNER@EXAMPLE.TEST ",
+            "password": "correct-horse-battery",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["username"] == "learner"
+    assert response.json()["email"] == "learner@example.test"
+    assert test_client.post(
+        "/api/auth/login",
+        json={"login": "  learner  ", "password": "correct-horse-battery"},
+    ).status_code == 200
+
+
 def test_login_rejects_incorrect_password(test_client: TestClient) -> None:
     register_user(test_client)
 

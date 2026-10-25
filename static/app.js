@@ -403,15 +403,47 @@ function renderAuth(mode = 'login', error = '') {
   document.querySelector('#auth-switch').addEventListener('click', () => renderAuth(register ? 'login' : 'register'));
   document.querySelector('#auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    const payload = Object.fromEntries(form.entries());
-    const response = await fetch(register ? '/api/auth/register' : '/api/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    if (!response.ok) { renderAuth(mode, result.detail || 'Не удалось выполнить запрос'); return; }
-    currentUser = result;
-    loadDifficulties('python');
+    const formElement = event.currentTarget;
+    const submitButton = formElement.querySelector('button[type="submit"]');
+    if (submitButton.disabled) return;
+    submitButton.disabled = true;
+    submitButton.textContent = 'Подождите...';
+    let succeeded = false;
+    try {
+      const form = new FormData(formElement);
+      const payload = Object.fromEntries(form.entries());
+      const response = await fetch(register ? '/api/auth/register' : '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        const message = typeof result.detail === 'string' ? result.detail : 'Проверьте введённые данные.';
+        let error = formElement.querySelector('.error');
+        if (!error) {
+          error = document.createElement('p');
+          error.className = 'error';
+          error.setAttribute('role', 'alert');
+          formElement.insertBefore(error, submitButton);
+        }
+        error.textContent = message;
+        return;
+      }
+      currentUser = result;
+      succeeded = true;
+    } catch {
+      let error = formElement.querySelector('.error');
+      if (!error) {
+        error = document.createElement('p');
+        error.className = 'error';
+        error.setAttribute('role', 'alert');
+        formElement.insertBefore(error, submitButton);
+      }
+      error.textContent = 'Не удалось связаться с сервером. Проверьте подключение и попробуйте снова.';
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = register ? 'Зарегистрироваться' : 'Войти';
+    }
+    if (succeeded) loadDifficulties('python');
   });
 }
 

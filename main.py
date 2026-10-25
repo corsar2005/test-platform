@@ -9,8 +9,9 @@ import secrets
 from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import inspect, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from database import Base, SessionLocal, engine, get_db
@@ -134,6 +135,16 @@ class AccountCredentials(BaseModel):
     username: str = Field(min_length=3, max_length=80)
     email: str = Field(min_length=5, max_length=160)
     password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def normalize_username(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize_email(cls, value: object) -> object:
+        return value.strip().lower() if isinstance(value, str) else value
 
 
 class LoginCredentials(BaseModel):
@@ -2954,9 +2965,16 @@ def register(payload: AccountCredentials, response: Response, db: Session = Depe
         raise HTTPException(status_code=409, detail="Этот email уже зарегистрирован")
     user = User(username=username, email=email, password_hash=hash_password(payload.password))
     db.add(user)
-    db.commit()
-    db.refresh(user)
-    create_session(response, user, db)
+    try:
+        db.flush()
+        create_session(response, user, db)
+    except IntegrityError:
+        db.rollback()
+        if db.scalar(select(User).where(User.username == username)):
+            raise HTTPException(status_code=409, detail="Это имя пользователя уже занято")
+        if db.scalar(select(User).where(User.email == email)):
+            raise HTTPException(status_code=409, detail="Этот email уже зарегистрирован")
+        raise
     return {"id": user.id, "username": user.username, "email": user.email}
 
 
