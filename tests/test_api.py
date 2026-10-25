@@ -2,7 +2,7 @@ from collections.abc import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -225,6 +225,34 @@ def test_register_trims_username_and_normalizes_email(test_client: TestClient) -
         "/api/auth/login",
         json={"login": "  learner  ", "password": "correct-horse-battery"},
     ).status_code == 200
+
+
+def test_register_uses_one_database_write_transaction(
+    test_client: TestClient,
+    test_session_factory: sessionmaker,
+) -> None:
+    statements: list[str] = []
+    bind = test_session_factory.kw["bind"]
+
+    def capture_statement(*args: object) -> None:
+        statements.append(str(args[2]).lstrip().split(maxsplit=1)[0].upper())
+
+    event.listen(bind, "before_cursor_execute", capture_statement)
+    try:
+        response = test_client.post(
+            "/api/auth/register",
+            json={
+                "username": "fast-registration",
+                "email": "fast@example.test",
+                "password": "correct-horse-battery",
+            },
+        )
+    finally:
+        event.remove(bind, "before_cursor_execute", capture_statement)
+
+    assert response.status_code == 200
+    assert statements.count("SELECT") == 0
+    assert statements.count("INSERT") == 2
 
 
 def test_login_rejects_incorrect_password(test_client: TestClient) -> None:

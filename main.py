@@ -180,9 +180,11 @@ def grade_for_score(score: int, max_score: int) -> int:
     return 2
 
 
-def create_session(response: Response, user: User, db: Session) -> None:
+def create_session(response: Response, user: User, db: Session) -> dict:
     token = secrets.token_urlsafe(48)
-    db.add(UserSession(token=token, user_id=user.id))
+    db.add(UserSession(token=token, user=user))
+    db.flush()
+    account = {"id": user.id, "username": user.username, "email": user.email}
     db.commit()
     response.set_cookie(
         "session_token",
@@ -192,6 +194,7 @@ def create_session(response: Response, user: User, db: Session) -> None:
         secure=SESSION_COOKIE_SECURE,
         max_age=60 * 60 * 24 * 30,
     )
+    return account
 
 
 def get_current_user(
@@ -2963,15 +2966,10 @@ def register(payload: AccountCredentials, response: Response, db: Session = Depe
     email = payload.email.strip().lower()
     if "@" not in email:
         raise HTTPException(status_code=400, detail="Введите корректный email")
-    if db.scalar(select(User).where(User.username == username)):
-        raise HTTPException(status_code=409, detail="Это имя пользователя уже занято")
-    if db.scalar(select(User).where(User.email == email)):
-        raise HTTPException(status_code=409, detail="Этот email уже зарегистрирован")
     user = User(username=username, email=email, password_hash=hash_password(payload.password))
     db.add(user)
     try:
-        db.flush()
-        create_session(response, user, db)
+        account = create_session(response, user, db)
     except IntegrityError:
         db.rollback()
         if db.scalar(select(User).where(User.username == username)):
@@ -2979,7 +2977,7 @@ def register(payload: AccountCredentials, response: Response, db: Session = Depe
         if db.scalar(select(User).where(User.email == email)):
             raise HTTPException(status_code=409, detail="Этот email уже зарегистрирован")
         raise
-    return {"id": user.id, "username": user.username, "email": user.email}
+    return account
 
 
 @app.post("/api/auth/login")
@@ -2990,8 +2988,7 @@ def login(payload: LoginCredentials, response: Response, db: Session = Depends(g
     )
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
-    create_session(response, user, db)
-    return {"id": user.id, "username": user.username, "email": user.email}
+    return create_session(response, user, db)
 
 
 @app.get("/api/auth/me")
