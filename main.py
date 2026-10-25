@@ -12,7 +12,7 @@ from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Query, 
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import inspect, select, text
+from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload, selectinload
 
@@ -3062,6 +3062,14 @@ def login(payload: LoginCredentials, response: Response, db: Session = Depends(g
     user = db.scalar(
         select(User).where((User.username == login_value) | (User.email == login_value.lower()))
     )
+    if user is None:
+        username_matches = db.scalars(
+            select(User)
+            .where(func.lower(User.username) == login_value.lower())
+            .limit(2)
+        ).all()
+        if len(username_matches) == 1:
+            user = username_matches[0]
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Неверный логин или пароль")
     return create_session(response, user, db)

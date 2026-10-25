@@ -230,6 +230,26 @@ def test_register_trims_username_and_normalizes_email(test_client: TestClient) -
     ).status_code == 200
 
 
+def test_login_matches_username_without_case_sensitivity(test_client: TestClient) -> None:
+    account = test_client.post(
+        "/api/auth/register",
+        json={
+            "username": "CaseSensitive",
+            "email": "case@example.test",
+            "password": "correct-horse-battery",
+        },
+    ).json()
+    test_client.post("/api/auth/logout")
+
+    response = test_client.post(
+        "/api/auth/login",
+        json={"login": "casesensitive", "password": "correct-horse-battery"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == account["id"]
+
+
 def test_register_uses_one_database_write_transaction(
     test_client: TestClient,
     test_session_factory: sessionmaker,
