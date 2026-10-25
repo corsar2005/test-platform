@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import random
 import secrets
+from threading import RLock
+import time
 
 from fastapi import Cookie, Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse
@@ -113,6 +115,12 @@ ARTICLE_IDS = (
     "databases",
 )
 GRADE_LABELS = {5: "Отлично", 4: "Хорошо", 3: "Удовлетворительно", 2: "Нужно повторить"}
+DIFFICULTY_CACHE_TTL_SECONDS = 300
+_difficulty_cache_lock = RLock()
+_difficulty_cache: dict[
+    tuple[str, ...],
+    tuple[float, dict[str, list[dict[str, str | int]]]],
+] = {}
 
 
 class SubmittedAnswer(BaseModel):
@@ -2892,6 +2900,7 @@ async def lifespan(_: FastAPI):
     ensure_schema()
     with SessionLocal() as db:
         seed_questions(db)
+    clear_difficulty_cache()
     yield
 
 
@@ -2943,6 +2952,73 @@ def unique_questions_for_difficulty(
     for question in questions:
         unique_questions.setdefault(question_content_key(question), question)
     return list(unique_questions.values())
+
+
+def clear_difficulty_cache() -> None:
+    with _difficulty_cache_lock:
+        _difficulty_cache.clear()
+
+
+def difficulty_results_for_subjects(
+    db: Session,
+    subjects: list[Subject],
+) -> dict[str, list[dict[str, str | int]]]:
+    requested_subjects = list(dict.fromkeys(subjects))
+    cache_key = tuple(sorted(subject.value for subject in requested_subjects))
+    now = time.monotonic()
+    with _difficulty_cache_lock:
+        cached = _difficulty_cache.get(cache_key)
+        if cached and cached[0] > now:
+            return cached[1]
+
+        difficulties_by_subject = {
+            subject: available_difficulties(subject) for subject in requested_subjects
+        }
+        counts = {
+            subject: {difficulty: 0 for difficulty in difficulties}
+            for subject, difficulties in difficulties_by_subject.items()
+        }
+        seen_questions: dict[tuple[Subject, Difficulty], set[tuple]] = {}
+        questions = db.scalars(
+            select(Question)
+            .where(
+                Question.subject.in_([subject.value for subject in requested_subjects]),
+                Question.is_active.is_(True),
+            )
+            .options(joinedload(Question.options))
+        ).unique().all()
+        for question in questions:
+            subject = Subject(question.subject)
+            difficulty = Difficulty(question.difficulty)
+            if difficulty not in counts[subject]:
+                continue
+            group = (subject, difficulty)
+            content_key = question_content_key(question)
+            if content_key in seen_questions.setdefault(group, set()):
+                continue
+            seen_questions[group].add(content_key)
+            counts[subject][difficulty] += 1
+
+        results = {
+            subject.value: [
+                {
+                    "id": difficulty.value,
+                    "label": DIFFICULTY_LABELS[difficulty],
+                    "question_count": counts[subject][difficulty],
+                }
+                for difficulty in difficulties
+            ]
+            for subject, difficulties in difficulties_by_subject.items()
+        }
+        expired_keys = [
+            key for key, (expires_at, _) in _difficulty_cache.items() if expires_at <= now
+        ]
+        for key in expired_keys:
+            del _difficulty_cache[key]
+        if len(_difficulty_cache) >= 32:
+            _difficulty_cache.pop(next(iter(_difficulty_cache)))
+        _difficulty_cache[cache_key] = (now + DIFFICULTY_CACHE_TTL_SECONDS, results)
+        return results
 
 
 def available_difficulties(subject: Subject) -> tuple[Difficulty, ...]:
@@ -3091,17 +3167,7 @@ def get_difficulties(
     subject: Subject = Query(Subject.PYTHON),
     db: Session = Depends(get_db),
 ) -> dict:
-    difficulties = available_difficulties(subject)
-    counts = {
-        difficulty.value: len(unique_questions_for_difficulty(db, difficulty, subject))
-        for difficulty in difficulties
-    }
-    return {
-        "difficulties": [
-            {"id": difficulty.value, "label": DIFFICULTY_LABELS[difficulty], "question_count": counts[difficulty.value]}
-            for difficulty in difficulties
-        ]
-    }
+    return {"difficulties": difficulty_results_for_subjects(db, [subject])[subject.value]}
 
 
 @app.get("/api/difficulties/batch")
@@ -3109,48 +3175,8 @@ def get_difficulties_batch(
     subjects: list[Subject] = Query(),
     db: Session = Depends(get_db),
 ) -> dict:
-    requested_subjects = list(dict.fromkeys(subjects))
-    difficulties_by_subject = {
-        subject: available_difficulties(subject) for subject in requested_subjects
-    }
-    counts = {
-        subject: {difficulty: 0 for difficulty in difficulties}
-        for subject, difficulties in difficulties_by_subject.items()
-    }
-    seen_questions: dict[tuple[Subject, Difficulty], set[tuple]] = {}
-
-    questions = db.scalars(
-        select(Question)
-        .where(
-            Question.subject.in_([subject.value for subject in requested_subjects]),
-            Question.is_active.is_(True),
-        )
-        .options(joinedload(Question.options))
-    ).unique().all()
-    for question in questions:
-        subject = Subject(question.subject)
-        difficulty = Difficulty(question.difficulty)
-        if difficulty not in counts[subject]:
-            continue
-        group = (subject, difficulty)
-        content_key = question_content_key(question)
-        if content_key in seen_questions.setdefault(group, set()):
-            continue
-        seen_questions[group].add(content_key)
-        counts[subject][difficulty] += 1
-
     return {
-        "difficulties": {
-            subject.value: [
-                {
-                    "id": difficulty.value,
-                    "label": DIFFICULTY_LABELS[difficulty],
-                    "question_count": counts[subject][difficulty],
-                }
-                for difficulty in difficulties
-            ]
-            for subject, difficulties in difficulties_by_subject.items()
-        }
+        "difficulties": difficulty_results_for_subjects(db, subjects)
     }
 
 

@@ -29,6 +29,8 @@ def test_session_factory() -> Iterator[sessionmaker]:
 
 @pytest.fixture
 def test_client(test_session_factory: sessionmaker) -> Iterator[TestClient]:
+    main.clear_difficulty_cache()
+
     def override_get_db() -> Iterator[Session]:
         with test_session_factory() as db:
             yield db
@@ -40,6 +42,7 @@ def test_client(test_session_factory: sessionmaker) -> Iterator[TestClient]:
     finally:
         client.close()
         main.app.dependency_overrides.pop(get_db, None)
+        main.clear_difficulty_cache()
 
 
 def register_user(client: TestClient, username: str = "learner") -> dict:
@@ -477,3 +480,29 @@ def test_batch_difficulties_returns_unique_counts_for_requested_subjects(
         for item in individual_response.json()["difficulties"]
         if item["id"] == "easy"
     ) == 1
+
+
+def test_batch_difficulties_reuses_cached_database_result(
+    test_client: TestClient,
+    test_session_factory: sessionmaker,
+) -> None:
+    create_test_questions(test_session_factory, count=2, subject="python", difficulty="easy")
+    select_count = 0
+
+    def count_selects(*args: object) -> None:
+        nonlocal select_count
+        if str(args[2]).lstrip().upper().startswith("SELECT"):
+            select_count += 1
+
+    bind = test_session_factory.kw["bind"]
+    event.listen(bind, "before_cursor_execute", count_selects)
+    try:
+        params = [("subjects", "python"), ("subjects", "fastapi")]
+        first_response = test_client.get("/api/difficulties/batch", params=params)
+        second_response = test_client.get("/api/difficulties/batch", params=params)
+    finally:
+        event.remove(bind, "before_cursor_execute", count_selects)
+
+    assert first_response.status_code == 200
+    assert second_response.json() == first_response.json()
+    assert select_count == 1

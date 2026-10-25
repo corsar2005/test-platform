@@ -29,13 +29,31 @@ else:
 
 if database_url.get_backend_name() == "sqlite":
     connect_args = {"check_same_thread": False}
+    pool_options = {}
 else:
     connect_args = {}
+    pool_size = int(os.environ.get("DB_POOL_SIZE", "2"))
+    max_overflow = int(os.environ.get("DB_MAX_OVERFLOW", "3"))
+    pool_timeout = int(os.environ.get("DB_POOL_TIMEOUT", "10"))
+    pool_recycle = int(os.environ.get("DB_POOL_RECYCLE", "300"))
+    if pool_size < 1 or max_overflow < 0 or pool_timeout < 1 or pool_recycle < 0:
+        raise ValueError(
+            "DB_POOL_SIZE and DB_POOL_TIMEOUT must be positive; "
+            "DB_MAX_OVERFLOW and DB_POOL_RECYCLE must be non-negative"
+        )
+    pool_options = {
+        "pool_size": pool_size,
+        "max_overflow": max_overflow,
+        "pool_timeout": pool_timeout,
+        "pool_recycle": pool_recycle,
+        "pool_use_lifo": True,
+    }
 
 engine = create_engine(
     database_url,
     connect_args=connect_args,
     pool_pre_ping=True,
+    **pool_options,
 )
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
