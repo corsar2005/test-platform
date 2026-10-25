@@ -450,28 +450,16 @@ function renderAuth(mode = 'login', error = '') {
 async function loadDifficulties(subject = selectedSubject) {
   selectedSubject = subject;
   const subjects = ['python', 'fastapi', 'aiogram', 'threading', 'multiprocessing', 'asyncio', 'generator', 'decorator', 'regex', 'pandas', 'unittest', 'pytest', 'linters', 'files_formats', 'databases'];
-  const responses = await Promise.all(subjects.map((id) => fetch(`/api/difficulties?subject=${id}`)));
-  if (responses.some((response) => !response.ok)) {
+  const params = new URLSearchParams();
+  subjects.forEach((id) => params.append('subjects', id));
+  const response = await fetch(`/api/difficulties/batch?${params}`);
+  if (!response.ok) {
     renderAuth('login', 'Не удалось загрузить уровни сложности.');
     return;
   }
-  const data = await Promise.all(responses.map((response) => response.json()));
+  const data = await response.json();
   renderDifficultySelection(
-    data[0].difficulties,
-    data[1].difficulties,
-    data[2].difficulties,
-    data[3].difficulties,
-    data[4].difficulties,
-    data[5].difficulties,
-    data[6].difficulties,
-    data[7].difficulties,
-    data[8].difficulties,
-    data[9].difficulties,
-    data[10].difficulties,
-    data[11].difficulties,
-    data[12].difficulties,
-    data[13].difficulties,
-    data[14].difficulties,
+    ...subjects.map((id) => data.difficulties[id]),
   );
 }
 

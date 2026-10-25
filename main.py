@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from database import Base, SessionLocal, engine, get_db
 from models import ArticleProgress, Answer, Difficulty, Option, Question, QuestionType, Submission, Subject, User, UserSession
@@ -2942,6 +2942,10 @@ def unique_questions_for_difficulty(
     return list(unique_questions.values())
 
 
+def available_difficulties(subject: Subject) -> tuple[Difficulty, ...]:
+    return FASTAPI_DIFFICULTIES if subject == Subject.FASTAPI else PYTHON_DIFFICULTIES
+
+
 @app.get("/", response_class=FileResponse)
 def index() -> Path:
     return BASE_DIR / "static" / "index.html"
@@ -3090,25 +3094,66 @@ def get_difficulties(
     subject: Subject = Query(Subject.PYTHON),
     db: Session = Depends(get_db),
 ) -> dict:
-    available_difficulties = {
-        Subject.PYTHON: PYTHON_DIFFICULTIES,
-        Subject.PYTHON_BASES: PYTHON_DIFFICULTIES,
-        Subject.FASTAPI: FASTAPI_DIFFICULTIES,
-        Subject.AIOGRAM: PYTHON_DIFFICULTIES,
-        **{subject: PYTHON_DIFFICULTIES for subject in CONCURRENCY_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_BASES_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_BASICS_TOPIC_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_CONCEPT_SUBJECTS},
-    }[subject]
+    difficulties = available_difficulties(subject)
     counts = {
         difficulty.value: len(unique_questions_for_difficulty(db, difficulty, subject))
-        for difficulty in available_difficulties
+        for difficulty in difficulties
     }
     return {
         "difficulties": [
             {"id": difficulty.value, "label": DIFFICULTY_LABELS[difficulty], "question_count": counts[difficulty.value]}
-            for difficulty in available_difficulties
+            for difficulty in difficulties
         ]
+    }
+
+
+@app.get("/api/difficulties/batch")
+def get_difficulties_batch(
+    subjects: list[Subject] = Query(),
+    db: Session = Depends(get_db),
+) -> dict:
+    requested_subjects = list(dict.fromkeys(subjects))
+    difficulties_by_subject = {
+        subject: available_difficulties(subject) for subject in requested_subjects
+    }
+    counts = {
+        subject: {difficulty: 0 for difficulty in difficulties}
+        for subject, difficulties in difficulties_by_subject.items()
+    }
+    seen_questions: dict[tuple[Subject, Difficulty], set[tuple]] = {}
+
+    questions = db.scalars(
+        select(Question)
+        .where(
+            Question.subject.in_([subject.value for subject in requested_subjects]),
+            Question.is_active.is_(True),
+        )
+        .options(joinedload(Question.options))
+    ).unique().all()
+    for question in questions:
+        subject = Subject(question.subject)
+        difficulty = Difficulty(question.difficulty)
+        if difficulty not in counts[subject]:
+            continue
+        group = (subject, difficulty)
+        content_key = question_content_key(question)
+        if content_key in seen_questions.setdefault(group, set()):
+            continue
+        seen_questions[group].add(content_key)
+        counts[subject][difficulty] += 1
+
+    return {
+        "difficulties": {
+            subject.value: [
+                {
+                    "id": difficulty.value,
+                    "label": DIFFICULTY_LABELS[difficulty],
+                    "question_count": counts[subject][difficulty],
+                }
+                for difficulty in difficulties
+            ]
+            for subject, difficulties in difficulties_by_subject.items()
+        }
     }
 
 
@@ -3138,17 +3183,7 @@ def get_test(
     _: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    available_difficulties = {
-        Subject.PYTHON: PYTHON_DIFFICULTIES,
-        Subject.PYTHON_BASES: PYTHON_DIFFICULTIES,
-        Subject.FASTAPI: FASTAPI_DIFFICULTIES,
-        Subject.AIOGRAM: PYTHON_DIFFICULTIES,
-        **{subject: PYTHON_DIFFICULTIES for subject in CONCURRENCY_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_BASES_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_BASICS_TOPIC_SUBJECTS},
-        **{subject: PYTHON_DIFFICULTIES for subject in PYTHON_CONCEPT_SUBJECTS},
-    }[subject]
-    if difficulty not in available_difficulties:
+    if difficulty not in available_difficulties(subject):
         raise HTTPException(status_code=400, detail="Этот уровень недоступен для выбранной темы")
     questions = unique_questions_for_difficulty(db, difficulty, subject)
     if len(questions) < 20:

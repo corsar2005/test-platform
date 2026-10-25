@@ -413,3 +413,39 @@ def test_health_check_reports_ready(test_client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_batch_difficulties_returns_unique_counts_for_requested_subjects(
+    test_client: TestClient,
+    test_session_factory: sessionmaker,
+) -> None:
+    python_questions = create_test_questions(
+        test_session_factory, count=2, subject="python", difficulty="easy"
+    )
+    create_test_questions(test_session_factory, count=3, subject="fastapi", difficulty="medium")
+    with test_session_factory() as db:
+        first_question = db.get(Question, python_questions[0]["question_id"])
+        duplicate_question = db.get(Question, python_questions[1]["question_id"])
+        assert first_question is not None
+        assert duplicate_question is not None
+        duplicate_question.title = first_question.title
+        db.commit()
+
+    response = test_client.get(
+        "/api/difficulties/batch",
+        params=[("subjects", "python"), ("subjects", "fastapi"), ("subjects", "python")],
+    )
+
+    assert response.status_code == 200
+    difficulties = response.json()["difficulties"]
+    assert set(difficulties) == {"python", "fastapi"}
+    assert len(difficulties["python"]) == 5
+    assert len(difficulties["fastapi"]) == 6
+    assert next(item["question_count"] for item in difficulties["python"] if item["id"] == "easy") == 1
+    assert next(item["question_count"] for item in difficulties["fastapi"] if item["id"] == "medium") == 3
+    individual_response = test_client.get("/api/difficulties", params={"subject": "python"})
+    assert next(
+        item["question_count"]
+        for item in individual_response.json()["difficulties"]
+        if item["id"] == "easy"
+    ) == 1
