@@ -466,6 +466,15 @@ def test_health_check_reports_ready(test_client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_index_revalidates_html_and_references_versioned_assets(test_client: TestClient) -> None:
+    response = test_client.get("/")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache, must-revalidate"
+    assert "app.js?v=20261025-auth-cache" in response.text
+    assert "styles.css?v=20261025-auth-cache" in response.text
+
+
 def test_batch_difficulties_returns_unique_counts_for_requested_subjects(
     test_client: TestClient,
     test_session_factory: sessionmaker,

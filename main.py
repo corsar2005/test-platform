@@ -3026,7 +3026,8 @@ def available_difficulties(subject: Subject) -> tuple[Difficulty, ...]:
 
 
 @app.get("/", response_class=FileResponse)
-def index() -> Path:
+def index(response: Response) -> Path:
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return BASE_DIR / "static" / "index.html"
 
 
