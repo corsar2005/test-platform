@@ -361,7 +361,7 @@ def test_python_question_bank_covers_multiple_skills_at_each_difficulty() -> Non
         ),
         main.Difficulty.EXPERT: (
             "Что вернет f(",
-            "Какой список вернет вызов add",
+            "Какой список вернет функция add",
             "Чему равны результаты двух последовательных",
             "Что вернут функции из",
             "Чему равен результат reduce",
@@ -370,7 +370,7 @@ def test_python_question_bank_covers_multiple_skills_at_each_difficulty() -> Non
 
     candidates = main.python_question_candidates()
     for difficulty, prefixes in family_prefixes.items():
-        questions = candidates[difficulty][:100]
+        questions = candidates[difficulty]
         assert len(questions) == 100
         assert len({title.casefold() for title, _, _ in questions}) == 100
         assert {prefix for prefix in prefixes if any(
