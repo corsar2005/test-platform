@@ -150,10 +150,10 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--accent); }
 .question h2 { margin: 0; font-size: clamp(22px, 3vw, 30px); line-height: 1.1; font-weight: 400; }
 .question p { color: var(--muted); line-height: 1.5; }
 .options { display: grid; gap: 10px; margin-top: 22px; }
-.option { display: flex; align-items: center; gap: 12px; padding: 15px 16px; border: 1px solid #39423d; background: rgba(12,16,15,.55); cursor: pointer; transition: border-color .2s, background .2s; }
+.option { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 15px 16px; border: 1px solid #39423d; background: rgba(12,16,15,.55); cursor: pointer; transition: border-color .2s, background .2s; }
 .option:hover, .option:has(input:checked) { border-color: var(--accent); background: rgba(215,243,106,.09); }
-.option input { accent-color: var(--accent); width: 17px; height: 17px; }
-.option span { font-size: 17px; }
+.option input { flex: 0 0 17px; accent-color: var(--accent); width: 17px; height: 17px; }
+.option span { min-width: 0; overflow-wrap: anywhere; font-size: 17px; }
 textarea, .code-editor { display: block; width: 100%; min-height: 145px; resize: vertical; margin-top: 22px; padding: 16px; border: 1px solid #39423d; outline: none; color: var(--ink); background: #0c100f; font: 15px/1.55 Consolas, monospace; }
 textarea:focus, .code-editor:focus { border-color: var(--accent); }
 .written-tools { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
