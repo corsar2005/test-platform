@@ -326,6 +326,27 @@ def test_test_endpoint_returns_twenty_questions(
     result = response.json()
     assert result["question_count"] == 20
     assert len({question["id"] for question in result["questions"]}) == 20
+    assert len({question["title"].strip().casefold() for question in result["questions"]}) == 20
+
+
+def test_questions_with_same_title_are_deduplicated(
+    test_session_factory: sessionmaker,
+) -> None:
+    questions = create_test_questions(test_session_factory, count=2)
+    with test_session_factory() as db:
+        duplicate = db.get(Question, questions[1]["question_id"])
+        assert duplicate is not None
+        duplicate.title = "  ТЕСТОВЫЙ   ВОПРОС 0  "
+        duplicate.reference_answer = "Другой ответ"
+        db.commit()
+
+        assert len(main.unique_questions_for_difficulty(db, main.Difficulty.EASY)) == 1
+
+        main.deactivate_duplicate_questions(db)
+        db.commit()
+
+        active_questions = db.query(Question).filter(Question.is_active.is_(True)).all()
+        assert len(active_questions) == 1
 
 
 def test_test_endpoint_rejects_unavailable_difficulty(test_client: TestClient) -> None:

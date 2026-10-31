@@ -2492,6 +2492,7 @@ def question_title_without_generated_number(title: str) -> str:
 def seed_questions(db: Session) -> None:
     for question in db.scalars(select(Question)).all():
         question.title = question_title_without_generated_number(question.title)
+    deactivate_duplicate_questions(db)
 
     if db.query(Question).count() == 0:
         db.add_all([
@@ -2924,13 +2925,23 @@ def serialize_question(question: Question) -> dict:
     }
 
 
-def question_content_key(question: Question) -> tuple:
-    return (
-        getattr(question.question_type, "value", question.question_type),
-        question_title_without_generated_number(question.title).strip().casefold(),
-        (question.reference_answer or "").strip().casefold(),
-        tuple(sorted((option.label.strip().casefold(), option.is_correct) for option in question.options)),
-    )
+def question_content_key(question: Question) -> str:
+    return " ".join(question_title_without_generated_number(question.title).split()).casefold()
+
+
+def deactivate_duplicate_questions(db: Session) -> None:
+    seen: set[tuple[str, str, str]] = set()
+    questions = db.scalars(
+        select(Question)
+        .where(Question.is_active.is_(True))
+        .order_by(Question.id)
+    ).all()
+    for question in questions:
+        key = (question.subject, question.difficulty, question_content_key(question))
+        if key in seen:
+            question.is_active = False
+        else:
+            seen.add(key)
 
 
 def unique_questions_for_difficulty(
