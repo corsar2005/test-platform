@@ -14,7 +14,6 @@
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  min-width: 320px;
   color: var(--ink);
   background: #0c100f;
   font-family: Georgia, 'Times New Roman', serif;
@@ -113,11 +112,11 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--accent); }
 .auth-form input:focus { border-color: var(--accent); }
 .auth-form .submit-button { margin-top: 2px; }
 .auth-switch { margin-top: 18px; padding: 0; border: 0; color: var(--accent); background: transparent; cursor: pointer; font: 14px Arial, sans-serif; }
-.difficulty-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 36px; }
+.difficulty-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 36px; }
 .difficulty-section { margin-top: 34px; }
 .difficulty-section h2 { margin: 0; font-size: 24px; font-weight: 400; }
 .difficulty-section .difficulty-grid { margin-top: 14px; }
-.difficulty-card { min-height: 220px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
+.difficulty-card { width: 100%; min-width: 0; min-height: 220px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
 .difficulty-card:hover { transform: translateY(-4px); border-color: var(--accent); background: linear-gradient(145deg, rgba(48,62,48,.95), rgba(17,21,19,.96)); }
 .difficulty-card:disabled { cursor: not-allowed; opacity: .45; }
 .difficulty-label, .difficulty-card small, .start-label { display: block; font-family: Arial, sans-serif; }
@@ -125,12 +124,12 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--accent); }
 .difficulty-card strong { display: block; margin: 38px 0 2px; color: var(--accent); font-size: 50px; font-weight: 400; }
 .difficulty-card .subject-name { font-size: 40px; }
 .difficulty-card small { color: var(--muted); }
-.topic-card { min-height: 190px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
+.topic-card { width: 100%; min-width: 0; min-height: 190px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
 .topic-card:hover { transform: translateY(-4px); border-color: var(--accent); background: linear-gradient(145deg, rgba(48,62,48,.95), rgba(17,21,19,.96)); }
 .topic-card strong { display: block; margin: 28px 0 8px; color: var(--accent); font-size: 25px; font-weight: 400; }
 .topic-card small { display: block; color: var(--muted); font: 14px/1.45 Arial, sans-serif; }
-.theory-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 28px; }
-.theory-card { min-height: 190px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
+.theory-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.theory-card { width: 100%; min-width: 0; min-height: 190px; padding: 22px; border: 1px solid var(--line); color: var(--ink); text-align: left; background: linear-gradient(145deg, rgba(29,36,32,.95), rgba(17,21,19,.96)); cursor: pointer; transition: transform .2s, border-color .2s, background .2s; }
 .theory-card:hover { transform: translateY(-4px); border-color: var(--accent); background: linear-gradient(145deg, rgba(48,62,48,.95), rgba(17,21,19,.96)); }
 .theory-card strong { display: block; margin: 22px 0 8px; color: var(--accent); font-size: 25px; font-weight: 400; }
 .theory-card small { display: block; color: var(--muted); font: 14px/1.5 Arial, sans-serif; }
@@ -187,5 +186,6 @@ textarea:focus, .code-editor:focus { border-color: var(--accent); }
 .review-item.is-wrong .review-title strong { color: var(--orange); }
 .review-item span { color: var(--ink); white-space: pre-wrap; }
 .error { color: var(--error); }
-@media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards, .skeleton-grid, .skeleton-statistics { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards, .skeleton-grid, .skeleton-statistics { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 360px) { .view-tab { padding-right: 12px; padding-left: 12px; } }
 @media (max-width: 600px) { .shell { width: min(100% - 24px, 920px); padding-top: 35px; } .question { padding: 20px; } .test-progress { align-items: stretch; flex-direction: column; gap: 10px; } }
