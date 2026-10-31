@@ -2489,10 +2489,167 @@ def question_title_without_generated_number(title: str) -> str:
     return generated_title if separator else title
 
 
+def python_question_candidates() -> dict[Difficulty, list[tuple[str, str, list[str]]]]:
+    candidates = {difficulty: [] for difficulty in PYTHON_DIFFICULTIES}
+
+    def add(
+        difficulty: Difficulty,
+        title: str,
+        answer: object,
+        wrong_answers: list[object],
+    ) -> None:
+        correct = repr(answer)
+        wrong = list(dict.fromkeys(
+            repr(value) for value in wrong_answers if repr(value) != correct
+        ))
+        if isinstance(answer, bool):
+            fallback_answers: list[object] = [not answer, None, "неверно"]
+        elif isinstance(answer, int):
+            fallback_answers = [answer + offset for offset in (1, -1, 2, -2, 3, -3)]
+        elif isinstance(answer, str):
+            fallback_answers = [f"{answer}!", answer[::-1], answer.upper(), f"_{answer}"]
+        elif isinstance(answer, list):
+            fallback_answers = [
+                answer + [None], answer[::-1], answer + [0], answer + [1], answer + ["x"]
+            ]
+        elif isinstance(answer, dict):
+            fallback_answers = [
+                {"incorrect": None},
+                {**answer, "extra": None},
+                {**answer, "fallback": 1},
+            ]
+        else:
+            fallback_answers = [None, "неверно", 0]
+        for value in fallback_answers:
+            label = repr(value)
+            if label != correct and label not in wrong:
+                wrong.append(label)
+            if len(wrong) == 3:
+                break
+        candidates[difficulty].append((title, correct, wrong[:3]))
+
+    for first in range(20):
+        for second in range(1, 21):
+            add(Difficulty.EASY, f"Вычислите сумму {first} + {second}.",
+                first + second, [first + second + 1, first + second - 1, first * second])
+            add(Difficulty.EASY, f"Чему равно произведение {first} * {second}?",
+                first * second, [first * second + 1, first * second - 1, first + second])
+            sample_text = f"{first}-{second}"
+            add(Difficulty.EASY, f"Сколько символов в строке {sample_text!r}?",
+                len(sample_text), [len(sample_text) + 1, len(sample_text) - 1, second])
+            add(Difficulty.EASY, f"Что вернет [{first}, {second}][{first % 2}]?",
+                [first, second][first % 2], [first + second, first, second])
+            add(Difficulty.EASY, f"Истинно ли выражение {first} < {second}?",
+                first < second, [not first < second, first == second, None])
+
+            values = [first, second, first + second, second + 1]
+            start = (first + second) % 3
+            add(Difficulty.MEDIUM, f"Какой список вернет values[{start}:] для values = {values}?",
+                values[start:], [values[:start], values[start + 1:], values[::-1]])
+            lookup = {"id": first, "score": second * 10}
+            add(Difficulty.MEDIUM, f"Что вернет profile.get('score', 0) для profile = {lookup}?",
+                lookup.get("score", 0), [first * 10, second, 0])
+            updated_values = [first, second]
+            updated_values.append(first + second)
+            add(Difficulty.MEDIUM, f"Каким станет список после append({first + second}): [{first}, {second}]?",
+                updated_values, [[first, second], [first + second, first, second], [first, second, second]])
+            step = first % 3 + 1
+            loop_count = len(range(first, first + second, step))
+            add(Difficulty.MEDIUM, f"Сколько итераций выполнит range({first}, {first + second}, {step})?",
+                loop_count, [loop_count + 1, max(0, loop_count - 1), second])
+            text = f"{first}-{second}"
+            add(Difficulty.MEDIUM, f"Что вернет выражение {text!r}.split('-')[1]?",
+                text.split("-")[1], [text.split("-")[0], text, ""])
+
+            outer_count = first + 1
+            inner_count = second
+            nested_sum = sum(
+                outer * inner
+                for outer in range(1, outer_count + 1)
+                for inner in range(1, inner_count + 1)
+            )
+            add(Difficulty.HARD, f"Чему равна сумма i * j во вложенных циклах range(1, {outer_count + 1}) и range(1, {inner_count + 1})?",
+                nested_sum, [nested_sum + 1, nested_sum - 1, outer_count * inner_count])
+            divisor = first % 4 + 2
+            filtered_values = [value for value in range(second) if value % divisor != 0]
+            add(Difficulty.HARD, f"Какие числа останутся после пропуска кратных {divisor} в range({second})?",
+                filtered_values, [[value for value in range(second) if value % divisor == 0],
+                                  list(range(second)), filtered_values[::-1]])
+            default_value = second + 2
+            function_result = first * 2 + default_value
+            add(Difficulty.HARD, f"Что вернет calculate({first}), если def calculate(x, scale=2, offset={default_value}) возвращает x * scale + offset?",
+                function_result, [first + default_value, first * default_value, function_result + 1])
+            mapping = {
+                value: value ** 2
+                for value in range(first, first + second)
+                if value % 2 == 0
+            }
+            add(Difficulty.HARD, f"Какой словарь создаст {{x: x ** 2 for x in range({first}, {first + second}) if x % 2 == 0}}?",
+                mapping, [{key: value for key, value in mapping.items() if key != first},
+                          {key: key for key in mapping}, {}])
+            paired_values = list(zip(range(first, first + 2), (second, second + 1)))
+            add(Difficulty.HARD, f"Какие пары создаст zip(range({first}, {first + 2}), ({second}, {second + 1}))?",
+                paired_values, [paired_values[::-1], paired_values[:1], []])
+
+            stop = first + second
+            advanced_values = [value ** 2 for value in range(first, stop) if value % 2 == 0]
+            add(Difficulty.ADVANCED, f"Что создаст [x ** 2 for x in range({first}, {stop}) if x % 2 == 0]?",
+                advanced_values, [[value for value in range(first, stop) if value % 2 == 0],
+                                  [value ** 2 for value in range(first, stop)],
+                                  advanced_values[::-1]])
+            generator_sum = sum(value * 2 for value in range(first, stop) if value % 3 == 0)
+            add(Difficulty.ADVANCED, f"Чему равно sum(x * 2 for x in range({first}, {stop}) if x % 3 == 0)?",
+                generator_sum, [generator_sum + 1, generator_sum - 1, sum(range(first, stop))])
+            mapped_values = list(map(lambda value: value + second, filter(
+                lambda value: value % 2 == 0, range(first, stop)
+            )))
+            add(Difficulty.ADVANCED, f"Что вернет list(map(lambda x: x + {second}, filter(lambda x: x % 2 == 0, range({first}, {stop}))))?",
+                mapped_values, [mapped_values[::-1], [value + second for value in range(first, stop)],
+                                [value for value in range(first, stop) if value % 2]])
+            sorted_values = sorted((first, second, first + second), key=lambda value: value % 3)
+            add(Difficulty.ADVANCED, f"В каком порядке окажутся элементы при sorted([{first}, {second}, {first + second}], key=lambda x: x % 3)?",
+                sorted_values, [sorted_values[::-1], sorted((first, second, first + second)),
+                                [first, second, first + second]])
+            zipped_sums = [left + right for left, right in zip(range(first, first + 3), range(second, second + 3))]
+            add(Difficulty.ADVANCED, f"Какой список даст [a + b for a, b in zip(range({first}, {first + 3}), range({second}, {second + 3}))]?",
+                zipped_sums, [zipped_sums[::-1], [first + second] * 3,
+                              list(range(first + second, first + second + 3))])
+
+            recursion_depth = first + 1
+            recursion_start = second - 1
+            recursive_result = recursion_start
+            for _ in range(recursion_depth):
+                recursive_result = 2 * recursive_result + 1
+            add(Difficulty.EXPERT, f"Что вернет f({recursion_depth}), если f(0) = {recursion_start}, а f(n) = 2 * f(n - 1) + 1?",
+                recursive_result, [recursive_result + 1, recursive_result - 1, recursion_start + recursion_depth])
+            mutable_first = first
+            mutable_second = second
+            accumulated = [mutable_first, mutable_second]
+            add(Difficulty.EXPERT, f"Какой список вернет вызов add({second}) после add({first}), если параметр values по умолчанию — общий список и функция добавляет в него аргумент?",
+                accumulated, [[mutable_second], [mutable_first], [mutable_first, mutable_second, mutable_second]])
+            generated_values = [first, second, first + second]
+            first_sum = sum(generated_values)
+            second_sum = sum(generated_values[1:])
+            add(Difficulty.EXPERT, f"Чему равны результаты двух последовательных sum() одного генератора для {generated_values}, если генератор сначала выдает эти значения?",
+                [first_sum, 0], [[first_sum, first_sum], [0, second_sum], [first_sum, second_sum]])
+            closure_values = [first, second, first + second]
+            late_bound_result = [closure_values[-1]] * len(closure_values)
+            add(Difficulty.EXPERT, f"Что вернут функции из [lambda: x for x in {closure_values}], если вызвать каждую после завершения цикла?",
+                late_bound_result, [closure_values, closure_values[::-1],
+                                    [closure_values[0], closure_values[1], closure_values[2]]])
+            reduced_values = range(first, first + second)
+            reduced_result = sum(value ** 2 for value in reduced_values)
+            add(Difficulty.EXPERT, f"Чему равен результат reduce(lambda acc, x: acc + x ** 2, range({first}, {first + second}), 0)?",
+                reduced_result, [sum(reduced_values), reduced_result + 1, reduced_result - 1])
+
+    return candidates
+
+
 def seed_questions(db: Session) -> None:
     for question in db.scalars(select(Question)).all():
         question.title = question_title_without_generated_number(question.title)
     deactivate_duplicate_questions(db)
+    deactivate_obsolete_python_questions(db)
 
     if db.query(Question).count() == 0:
         db.add_all([
@@ -2536,82 +2693,7 @@ def seed_questions(db: Session) -> None:
         ])
         db.flush()
 
-    generated_by_difficulty = {difficulty: [] for difficulty in PYTHON_DIFFICULTIES}
-    for first in range(20):
-        for second in range(1, 21):
-            easy_answer = first + second
-            easy_wrong = list(dict.fromkeys(
-                value
-                for value in (easy_answer + 1, easy_answer - 1, first * second)
-                if value != easy_answer
-            ))
-            candidate = easy_answer + 2
-            while len(easy_wrong) < 3:
-                if candidate != easy_answer and candidate not in easy_wrong:
-                    easy_wrong.append(candidate)
-                candidate += 1
-            generated_by_difficulty[Difficulty.EASY].append((
-                f"Какое значение получится у выражения {first} + {second}?",
-                str(easy_answer),
-                [str(value) for value in easy_wrong],
-            ))
-
-            values = [first + second * index for index in range(5)]
-            list_index = (first + second) % len(values)
-            medium_answer = values[list_index]
-            medium_wrong = [medium_answer + 1, medium_answer - 1, medium_answer + 2]
-            generated_by_difficulty[Difficulty.MEDIUM].append((
-                f"Что вернёт выражение numbers[{list_index}] для numbers = {values}?",
-                str(medium_answer),
-                [str(value) for value in medium_wrong],
-            ))
-
-            outer_count = first + 1
-            inner_count = second
-            hard_answer = sum(
-                outer * inner
-                for outer in range(1, outer_count + 1)
-                for inner in range(1, inner_count + 1)
-            )
-            hard_wrong = list(dict.fromkeys(
-                hard_answer + offset
-                for offset in (1, -1, outer_count, -inner_count, 2, -2)
-            ))[:3]
-            generated_by_difficulty[Difficulty.HARD].append((
-                f"Чему будет равен total, если перед циклами задать total = 0, а внутри вложенных циклов for i in range(1, {outer_count + 1}) и for j in range(1, {inner_count + 1}) выполнять total += i * j?",
-                str(hard_answer),
-                [str(value) for value in hard_wrong],
-            ))
-
-            advanced_start = first
-            advanced_stop = first + second
-            advanced_divisor = first % 5 + 2
-            advanced_remainder = first % advanced_divisor
-            advanced_answer = sum(
-                1
-                for value in range(advanced_start, advanced_stop)
-                if value % advanced_divisor == advanced_remainder
-            )
-            generated_by_difficulty[Difficulty.ADVANCED].append((
-                f"Сколько элементов создаст выражение [x ** 2 for x in range({advanced_start}, {advanced_stop}) if x % {advanced_divisor} == {advanced_remainder}]?",
-                str(advanced_answer),
-                [str(advanced_answer + 1), str(advanced_answer - 1), str(advanced_answer + 2)],
-            ))
-
-            recursion_depth = first + 1
-            initial_value = second - 1
-            expert_answer = initial_value
-            for _ in range(recursion_depth):
-                expert_answer = 2 * expert_answer + 1
-            expert_wrong = list(dict.fromkeys(
-                expert_answer + offset
-                for offset in (1, -1, recursion_depth, recursion_depth + 1, 2, -2)
-            ))[:3]
-            generated_by_difficulty[Difficulty.EXPERT].append((
-                f"Что вернет рекурсивная функция f(n), если f(0) = {initial_value}, f(n) = 2 * f(n - 1) + 1, и вызвать ее с n = {recursion_depth}?",
-                str(expert_answer),
-                [str(value) for value in expert_wrong],
-            ))
+    generated_by_difficulty = python_question_candidates()
 
     for difficulty, candidates in generated_by_difficulty.items():
         existing = unique_questions_for_difficulty(db, difficulty)
@@ -2927,6 +3009,25 @@ def serialize_question(question: Question) -> dict:
 
 def question_content_key(question: Question) -> str:
     return " ".join(question_title_without_generated_number(question.title).split()).casefold()
+
+
+def deactivate_obsolete_python_questions(db: Session) -> None:
+    obsolete_prefixes = (
+        "Какое значение получится у выражения ",
+        "Что вернёт выражение numbers[",
+        "Чему будет равен total, если перед циклами задать ",
+        "Сколько элементов создаст выражение [x ** 2 for x in range(",
+        "Что вернет рекурсивная функция f(n), если ",
+    )
+    questions = db.scalars(
+        select(Question).where(
+            Question.subject == Subject.PYTHON,
+            Question.is_active.is_(True),
+        )
+    ).all()
+    for question in questions:
+        if question.title.startswith(obsolete_prefixes):
+            question.is_active = False
 
 
 def deactivate_duplicate_questions(db: Session) -> None:

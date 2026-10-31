@@ -329,6 +329,59 @@ def test_test_endpoint_returns_twenty_questions(
     assert len({question["title"].strip().casefold() for question in result["questions"]}) == 20
 
 
+def test_python_question_bank_covers_multiple_skills_at_each_difficulty() -> None:
+    family_prefixes = {
+        main.Difficulty.EASY: (
+            "Вычислите сумму",
+            "Чему равно произведение",
+            "Сколько символов",
+            "Что вернет [",
+            "Истинно ли выражение",
+        ),
+        main.Difficulty.MEDIUM: (
+            "Какой список вернет values",
+            "Что вернет profile.get",
+            "Каким станет список",
+            "Сколько итераций",
+            "Что вернет выражение",
+        ),
+        main.Difficulty.HARD: (
+            "Чему равна сумма i * j",
+            "Какие числа останутся",
+            "Что вернет calculate",
+            "Какой словарь создаст",
+            "Какие пары создаст zip",
+        ),
+        main.Difficulty.ADVANCED: (
+            "Что создаст [x ** 2",
+            "Чему равно sum(x * 2",
+            "Что вернет list(map",
+            "В каком порядке окажутся",
+            "Какой список даст",
+        ),
+        main.Difficulty.EXPERT: (
+            "Что вернет f(",
+            "Какой список вернет вызов add",
+            "Чему равны результаты двух последовательных",
+            "Что вернут функции из",
+            "Чему равен результат reduce",
+        ),
+    }
+
+    candidates = main.python_question_candidates()
+    for difficulty, prefixes in family_prefixes.items():
+        questions = candidates[difficulty][:100]
+        assert len(questions) == 100
+        assert len({title.casefold() for title, _, _ in questions}) == 100
+        assert {prefix for prefix in prefixes if any(
+            title.startswith(prefix) for title, _, _ in questions
+        )} == set(prefixes)
+        assert all(
+            len(set([correct, *wrong])) == 4
+            for _, correct, wrong in questions
+        )
+
+
 def test_questions_with_same_title_are_deduplicated(
     test_session_factory: sessionmaker,
 ) -> None:
@@ -347,6 +400,26 @@ def test_questions_with_same_title_are_deduplicated(
 
         active_questions = db.query(Question).filter(Question.is_active.is_(True)).all()
         assert len(active_questions) == 1
+
+
+def test_obsolete_python_question_templates_are_deactivated(
+    test_session_factory: sessionmaker,
+) -> None:
+    questions = create_test_questions(test_session_factory, count=2)
+    with test_session_factory() as db:
+        obsolete = db.get(Question, questions[0]["question_id"])
+        current = db.get(Question, questions[1]["question_id"])
+        assert obsolete is not None
+        assert current is not None
+        obsolete.title = "Какое значение получится у выражения 3 + 4?"
+
+        main.deactivate_obsolete_python_questions(db)
+        db.commit()
+        db.refresh(obsolete)
+        db.refresh(current)
+
+        assert obsolete.is_active is False
+        assert current.is_active is True
 
 
 def test_test_endpoint_rejects_unavailable_difficulty(test_client: TestClient) -> None:
