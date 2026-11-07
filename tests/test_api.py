@@ -565,8 +565,8 @@ def test_index_revalidates_html_and_references_versioned_assets(test_client: Tes
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache, must-revalidate"
-    assert "app.js?v=20261025-auth-cache" in response.text
-    assert "styles.css?v=20261031-responsive-answers" in response.text
+    assert "app.js?v=20261107-theme-toggle" in response.text
+    assert "styles.css?v=20261107-typography" in response.text
 
 
 def test_batch_difficulties_returns_unique_counts_for_requested_subjects(

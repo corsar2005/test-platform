@@ -10,3 +10,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+android/.gradle/
+android/local.properties
+android/.idea/
+android/**/build/

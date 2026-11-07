@@ -42,6 +42,18 @@ python -m uvicorn main:app --reload
 
 Откройте `http://127.0.0.1:8000`.
 
+## Android-приложение и эмулятор
+
+Проект Android находится в `android/`. Это нативная оболочка WebView, которая использует тот же интерфейс и API: JavaScript, cookies для входа, системный выбор `.py`-файла, кнопку «Назад» и повтор подключения. Для локального эмулятора приложение по умолчанию открывает `http://10.0.2.2:8000`; сначала запустите backend на компьютере.
+
+1. Установите Android Studio и JDK 17. В Android Studio выберите JDK 17 в **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**, затем в SDK Manager добавьте Android SDK Platform 35, Android Emulator и образ системы x86_64 для эмулятора.
+2. Откройте каталог `android/` в Android Studio, дождитесь синхронизации Gradle и создайте виртуальное устройство в Device Manager.
+3. Запустите backend из корня проекта через `.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000`, затем запустите конфигурацию `app` на виртуальном устройстве. Эмулятор обращается к компьютеру по адресу `10.0.2.2`.
+4. Для сборки отладочного APK выполните `.\gradlew.bat assembleDebug` из каталога `android/`; результат появится в `android\app\build\outputs\apk\debug\app-debug.apk`.
+5. Для release-сборки задайте URL опубликованной HTTPS-версии платформы: `.\gradlew.bat assembleRelease -PtestPlatformUrl=https://<адрес-платформы>`. Release-сборка намеренно не использует HTTP; для распространения APK отдельно настройте подпись ключом, который не хранится в Git.
+
+В Android Studio SDK и системный образ можно загрузить через **Tools → SDK Manager** и **Tools → Device Manager**. Для локальной отладки разрешён только HTTP-хост эмулятора `10.0.2.2`; в release конфигурации открываются только HTTPS-ресурсы.
+
 Параметры конфигурации читаются из переменных окружения. Для локального запуска приложение загружает `.env` из корня проекта; переменные, заданные в окружении Windows, имеют приоритет. По умолчанию SQLite-файл `test_platform.db` находится в корне проекта. Чтобы выбрать другой локальный файл, задайте `SQLITE_DATABASE_PATH` в `.env`; относительные пути разрешаются относительно корня проекта, абсолютные пути тоже поддерживаются. Например, `SQLITE_DATABASE_PATH=data\practice.db` использует файл `data\practice.db` внутри проекта.
 
 Чтобы подключить облачную базу Neon, скопируйте connection string PostgreSQL в `NEON_DATABASE_URL` файла `.env`. Приложение автоматически использует драйвер Psycopg 3 и требует SSL для этого подключения. В PowerShell можно также задать `$env:NEON_DATABASE_URL = "..."` перед запуском. `NEON_DATABASE_URL` имеет приоритет над `DATABASE_URL` и локальной SQLite. При переключении на Neon приложение создаст и заполнит облачную базу; данные из локального SQLite-файла автоматически не копируются.
