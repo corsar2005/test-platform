@@ -8,8 +8,45 @@ let statisticsData;
 let timerInterval;
 let timerDeadline;
 const TEST_DURATION_SECONDS = 20 * 60;
+const THEME_STORAGE_KEY = 'python-test-lab-theme';
 
 const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
+
+function getPreferredTheme() {
+  const saved = localStorage.getItem(THEME_STORAGE_KEY);
+  if (saved === 'light' || saved === 'dark') return saved;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme = getPreferredTheme()) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  const toggle = document.querySelector('#theme-toggle');
+  if (toggle) {
+    const isDark = theme === 'dark';
+    toggle.textContent = isDark ? '☀️ Светлая тема' : '🌙 Тёмная тема';
+    toggle.setAttribute('aria-label', isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему');
+  }
+}
+
+function renderThemeToggle() {
+  return `<button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Светлая тема' : '🌙 Тёмная тема'}</button>`;
+}
+
+function renderAccountBar(username) {
+  return `<div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(username)}</strong></span><div class="account-bar-actions">${renderThemeToggle()}<button class="tool-button" id="logout-button">Выйти</button></div></div>`;
+}
+
+function bindThemeToggle() {
+  const toggle = document.querySelector('#theme-toggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  });
+}
+
+applyTheme();
 
 function skeletonBlock(className = '') {
   return `<span class="skeleton-block ${className}" aria-hidden="true"></span>`;
@@ -194,7 +231,7 @@ function renderPythonBasicsTopics() {
 
 function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiogramDifficulties, threadingDifficulties, multiprocessingDifficulties, asyncioDifficulties, generatorDifficulties, decoratorDifficulties, regexDifficulties, pandasDifficulties, unittestDifficulties, pytestDifficulties, linterDifficulties, filesFormatsDifficulties, databasesDifficulties) {
   app.innerHTML = `<p class="eyebrow">Python Test Lab / практика</p>
-    <div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(currentUser.username)}</strong></span><button class="tool-button" id="logout-button">Выйти</button></div>
+    ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('tests')}
     <h1>Выберите тему и сложность</h1>
     <section class="difficulty-section">
@@ -288,6 +325,7 @@ function renderWorkspaceTabs(activeView) {
 }
 
 function bindWorkspaceTabs() {
+  bindThemeToggle();
   document.querySelectorAll('.view-tab').forEach((button) => {
     button.addEventListener('click', () => {
       if (button.dataset.view === 'theory') loadTheoryIndex();
@@ -295,11 +333,14 @@ function bindWorkspaceTabs() {
       else loadDifficulties('python');
     });
   });
-  document.querySelector('#logout-button').addEventListener('click', async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    currentUser = null;
-    renderAuth();
-  });
+  const logoutButton = document.querySelector('#logout-button');
+  if (logoutButton) {
+    logoutButton.addEventListener('click', async () => {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      currentUser = null;
+      renderAuth();
+    });
+  }
 }
 
 async function loadStatisticsData() {
@@ -324,7 +365,7 @@ async function loadTheoryIndex() {
 function renderTheoryIndex() {
   const completedArticles = new Set(statisticsData?.completed_article_ids || []);
   app.innerHTML = `<p class="eyebrow">Python Test Lab / материалы</p>
-    <div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(currentUser.username)}</strong></span><button class="tool-button" id="logout-button">Выйти</button></div>
+    ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('theory')}
     <h1>Теория</h1>
     <p class="lead">Краткие статьи помогут повторить ключевые понятия перед тестированием. Выберите тему, чтобы открыть материал.</p>
@@ -355,7 +396,7 @@ function renderTheoryArticle(article) {
       ${section.code ? `<pre><code>${escapeHtml(section.code)}</code></pre>` : ''}
     </section>`).join('');
   app.innerHTML = `<p class="eyebrow">Python Test Lab / материалы</p>
-    <div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(currentUser.username)}</strong></span><button class="tool-button" id="logout-button">Выйти</button></div>
+    ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('theory')}
     <button class="article-back" id="theory-back">← Все статьи</button>
     <article class="theory-article">
@@ -416,7 +457,7 @@ function renderStatistics() {
       <td><strong class="grade grade-${attempt.grade}">${attempt.grade} · ${escapeHtml(attempt.grade_label)}</strong>${attempt.written_pending ? '<small class="pending-grade">Предварительная</small>' : ''}</td>
     </tr>`).join('') : '<tr><td colspan="4">Пока нет завершенных тестов.</td></tr>';
   app.innerHTML = `<p class="eyebrow">Python Test Lab / результаты</p>
-    <div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(currentUser.username)}</strong></span><button class="tool-button" id="logout-button">Выйти</button></div>
+    ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('statistics')}
     <h1>Ваша статистика</h1>
     <p class="lead">История изученных материалов и результаты каждой попытки сохраняются в аккаунте.</p>
@@ -438,7 +479,7 @@ function renderStatistics() {
 
 function renderAuth(mode = 'login', error = '') {
   const register = mode === 'register';
-  app.innerHTML = `<p class="eyebrow">Python Test Lab / аккаунт</p>
+  app.innerHTML = `<div class="auth-header"><p class="eyebrow">Python Test Lab / аккаунт</p>${renderThemeToggle()}</div>
     <h1>${register ? 'Создайте аккаунт' : 'Войдите в аккаунт'}</h1>
     <p class="lead">Ваши попытки и результаты будут сохраняться в базе данных.</p>
     <form id="auth-form" class="auth-form">
@@ -449,6 +490,7 @@ function renderAuth(mode = 'login', error = '') {
     </form>
     <button class="auth-switch" id="auth-switch">${register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>`;
   document.querySelector('#auth-switch').addEventListener('click', () => renderAuth(register ? 'login' : 'register'));
+  bindThemeToggle();
   document.querySelector('#auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget;
