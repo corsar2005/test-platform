@@ -22,31 +22,27 @@ function applyTheme(theme = getPreferredTheme()) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem(THEME_STORAGE_KEY, theme);
   const toggle = document.querySelector('#theme-toggle');
-  if (toggle) {
-    const isDark = theme === 'dark';
-    toggle.textContent = isDark ? '☀️ Светлая тема' : '🌙 Тёмная тема';
-    toggle.setAttribute('aria-label', isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему');
-  }
-}
-
-function renderThemeToggle() {
-  return `<button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">${document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️ Светлая тема' : '🌙 Тёмная тема'}</button>`;
+  const isDark = theme === 'dark';
+  if (!toggle) return;
+  toggle.textContent = isDark ? '☀️ Светлая тема' : '🌙 Тёмная тема';
+  toggle.setAttribute('aria-label', isDark ? 'Переключить на светлую тему' : 'Переключить на тёмную тему');
 }
 
 function renderAccountBar(username) {
-  return `<div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(username)}</strong></span><div class="account-bar-actions">${renderThemeToggle()}<button class="tool-button" id="logout-button">Выйти</button></div></div>`;
+  return `<div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(username)}</strong></span><div class="account-bar-actions"><button class="tool-button" id="logout-button">Выйти</button></div></div>`;
 }
 
 function bindThemeToggle() {
   const toggle = document.querySelector('#theme-toggle');
   if (!toggle) return;
-  toggle.addEventListener('click', () => {
+  toggle.onclick = () => {
     const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
-  });
+  };
 }
 
 applyTheme();
+bindThemeToggle();
 
 function skeletonBlock(className = '') {
   return `<span class="skeleton-block ${className}" aria-hidden="true"></span>`;
@@ -479,7 +475,7 @@ function renderStatistics() {
 
 function renderAuth(mode = 'login', error = '') {
   const register = mode === 'register';
-  app.innerHTML = `<div class="auth-header"><p class="eyebrow">Python Test Lab / аккаунт</p>${renderThemeToggle()}</div>
+  app.innerHTML = `<p class="eyebrow">Python Test Lab / аккаунт</p>
     <h1>${register ? 'Создайте аккаунт' : 'Войдите в аккаунт'}</h1>
     <p class="lead">Ваши попытки и результаты будут сохраняться в базе данных.</p>
     <form id="auth-form" class="auth-form">

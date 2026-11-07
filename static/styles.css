@@ -112,7 +112,8 @@ h1 { max-width: 680px; margin: 0; font-size: clamp(42px, 7vw, 78px); line-height
 .account-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 34px; color: var(--muted); font: 14px/1.4 Arial, sans-serif; }
 .account-bar strong { color: var(--accent); }
 .account-bar-actions { display: flex; align-items: center; gap: 10px; }
-.theme-toggle { border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer; font: 700 12px/1 Arial, sans-serif; padding: 10px 14px; }
+.theme-toggle-wrap { position: fixed; top: 18px; right: 18px; z-index: 10; }
+.theme-toggle { border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer; font: 700 12px/1 Arial, sans-serif; padding: 10px 14px; box-shadow: 0 8px 20px var(--shadow); }
 .theme-toggle:hover { border-color: var(--accent); }
 .auth-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .view-tabs { display: flex; gap: 8px; margin: 0 0 32px; border-bottom: 1px solid var(--line); }
