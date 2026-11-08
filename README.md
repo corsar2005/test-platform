@@ -49,7 +49,7 @@ python -m uvicorn main:app --reload
 1. Установите Android Studio и JDK 17. В Android Studio выберите JDK 17 в **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**, затем в SDK Manager добавьте Android SDK Platform 35 и Android Emulator.
 2. Откройте каталог `android/` в Android Studio или создайте виртуальное устройство в Device Manager.
 3. Соберите APK командой `.\gradlew.bat assembleDebug` из каталога `android/`; результат появится в `android\app\build\outputs\apk\debug\app-debug.apk`. Установите APK на устройство — запуск backend не нужен.
-4. APK использует снимок активного банка вопросов `static/offline-question-bank.js`. После изменения локальной базы вопросов обновите его командой `python scripts\export_android_question_bank.py`, затем пересоберите APK. Скрипт экспортирует только вопросы и варианты ответов, не копируя пользователей и историю сервера.
+4. APK использует снимок активного банка вопросов в `static/offline-question-bank.js`. После изменения локальной базы вопросов обновите его командой `python scripts\export_android_question_bank.py`, затем пересоберите APK. Скрипт экспортирует только вопросы и варианты ответов, не копируя пользователей и историю сервера.
 5. Для release-сборки выполните `.\gradlew.bat assembleRelease` из каталога `android/`. Для распространения APK отдельно настройте подпись ключом, который не хранится в Git.
 
 В Android Studio SDK и системный образ можно загрузить через **Tools → SDK Manager** и **Tools → Device Manager**. Android-приложение загружает локальные ресурсы из APK и блокирует сетевые запросы; изменения профиля, результаты тестов и прогресс статей остаются на устройстве и не синхронизируются с сервером.

@@ -46,16 +46,14 @@ def export_question_bank(database: Path, output: Path) -> int:
                 current_question["options"].append({
                     "id": row["option_id"],
                     "label": row["option_label"],
-                    "is_correct": bool(row["is_correct"]),
+                    "is_correct": row["is_correct"],
                 })
     finally:
         connection.close()
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
-        "window.OFFLINE_QUESTION_BANK="
-        + json.dumps(questions, ensure_ascii=False, separators=(",", ":"))
-        + ";\n",
+        json.dumps(questions, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",
     )
     return len(questions)
