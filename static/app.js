@@ -314,9 +314,18 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
 
 function renderWorkspaceTabs(activeView) {
   return `<nav class="view-tabs" aria-label="Разделы">
-    <button class="view-tab ${activeView === 'tests' ? 'is-active' : ''}" data-view="tests" aria-pressed="${activeView === 'tests'}">Тесты</button>
-    <button class="view-tab ${activeView === 'theory' ? 'is-active' : ''}" data-view="theory" aria-pressed="${activeView === 'theory'}">Теория</button>
-    <button class="view-tab ${activeView === 'statistics' ? 'is-active' : ''}" data-view="statistics" aria-pressed="${activeView === 'statistics'}">Статистика</button>
+    <button class="view-tab ${activeView === 'tests' ? 'is-active' : ''}" data-view="tests" aria-pressed="${activeView === 'tests'}">
+      <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M3 6h.01M3 12h.01M3 18h.01"/></svg>
+      <span>Тесты</span>
+    </button>
+    <button class="view-tab ${activeView === 'theory' ? 'is-active' : ''}" data-view="theory" aria-pressed="${activeView === 'theory'}">
+      <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v17H6.5A2.5 2.5 0 0 1 4 17.5zM4 17.5A2.5 2.5 0 0 1 6.5 15H20M8 7h8M8 10h8"/></svg>
+      <span>Теория</span>
+    </button>
+    <button class="view-tab ${activeView === 'statistics' ? 'is-active' : ''}" data-view="statistics" aria-pressed="${activeView === 'statistics'}">
+      <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17M8 15v-4M13 15V7M18 15V3"/></svg>
+      <span>Статистика</span>
+    </button>
   </nav>`;
 }
 
