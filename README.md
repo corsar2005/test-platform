@@ -44,15 +44,15 @@ python -m uvicorn main:app --reload
 
 ## Android-приложение и эмулятор
 
-Проект Android находится в `android/`. Это нативная оболочка WebView, которая использует тот же интерфейс и API: адаптированную для телефона вёрстку с нижней навигацией, JavaScript, cookies для входа, системный выбор `.py`-файла, кнопку «Назад» и повтор подключения. Для локального эмулятора приложение по умолчанию открывает `http://10.0.2.2:8000`; сначала запустите backend на компьютере.
+Проект Android находится в `android/`. Приложение автономное: интерфейс и банк вопросов включены в APK, проверка тестов выполняется на устройстве, а результаты и прогресс обучения хранятся локально. Интернет, backend, аккаунт и запуск сервера на компьютере не требуются. Мобильный интерфейс включает нижнюю навигацию; письменный ответ можно ввести или загрузить `.py`-файлом.
 
-1. Установите Android Studio и JDK 17. В Android Studio выберите JDK 17 в **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**, затем в SDK Manager добавьте Android SDK Platform 35, Android Emulator и образ системы x86_64 для эмулятора.
-2. Откройте каталог `android/` в Android Studio, дождитесь синхронизации Gradle и создайте виртуальное устройство в Device Manager.
-3. Запустите backend из корня проекта через `.venv\Scripts\python.exe -m uvicorn main:app --host 0.0.0.0 --port 8000`, затем запустите конфигурацию `app` на виртуальном устройстве. Эмулятор обращается к компьютеру по адресу `10.0.2.2`.
-4. Для сборки отладочного APK выполните `.\gradlew.bat assembleDebug` из каталога `android/`; результат появится в `android\app\build\outputs\apk\debug\app-debug.apk`.
-5. Для release-сборки задайте URL опубликованной HTTPS-версии платформы: `.\gradlew.bat assembleRelease -PtestPlatformUrl=https://<адрес-платформы>`. Release-сборка намеренно не использует HTTP; для распространения APK отдельно настройте подпись ключом, который не хранится в Git.
+1. Установите Android Studio и JDK 17. В Android Studio выберите JDK 17 в **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK**, затем в SDK Manager добавьте Android SDK Platform 35 и Android Emulator.
+2. Откройте каталог `android/` в Android Studio или создайте виртуальное устройство в Device Manager.
+3. Соберите APK командой `.\gradlew.bat assembleDebug` из каталога `android/`; результат появится в `android\app\build\outputs\apk\debug\app-debug.apk`. Установите APK на устройство — запуск backend не нужен.
+4. APK использует снимок активного банка вопросов `static/offline-question-bank.js`. После изменения локальной базы вопросов обновите его командой `python scripts\export_android_question_bank.py`, затем пересоберите APK. Скрипт экспортирует только вопросы и варианты ответов, не копируя пользователей и историю сервера.
+5. Для release-сборки выполните `.\gradlew.bat assembleRelease` из каталога `android/`. Для распространения APK отдельно настройте подпись ключом, который не хранится в Git.
 
-В Android Studio SDK и системный образ можно загрузить через **Tools → SDK Manager** и **Tools → Device Manager**. Для локальной отладки разрешён только HTTP-хост эмулятора `10.0.2.2`; в release конфигурации открываются только HTTPS-ресурсы.
+В Android Studio SDK и системный образ можно загрузить через **Tools → SDK Manager** и **Tools → Device Manager**. Android-приложение загружает локальные ресурсы из APK и блокирует сетевые запросы; изменения профиля, результаты тестов и прогресс статей остаются на устройстве и не синхронизируются с сервером.
 
 Параметры конфигурации читаются из переменных окружения. Для локального запуска приложение загружает `.env` из корня проекта; переменные, заданные в окружении Windows, имеют приоритет. По умолчанию SQLite-файл `test_platform.db` находится в корне проекта. Чтобы выбрать другой локальный файл, задайте `SQLITE_DATABASE_PATH` в `.env`; относительные пути разрешаются относительно корня проекта, абсолютные пути тоже поддерживаются. Например, `SQLITE_DATABASE_PATH=data\practice.db` использует файл `data\practice.db` внутри проекта.
 

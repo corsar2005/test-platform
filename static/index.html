@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Python Test Lab</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261108-bottom-nav2">
+  <link rel="stylesheet" href="styles.css?v=20261108-offline">
 </head>
 <body>
   <div class="theme-toggle-wrap">
@@ -13,7 +13,11 @@
   <main id="app" class="shell">
     <p class="loading">Загрузка теста...</p>
   </main>
-  <script src="/static/theory.js?v=20261018-databases"></script>
-  <script src="/static/app.js?v=20261108-bottom-nav"></script>
+  <script>
+    if (location.protocol === 'file:') document.write('<script src="offline-question-bank.js"><\/script>');
+  </script>
+  <script src="theory.js?v=20261018-databases"></script>
+  <script src="offline.js?v=20261108-offline"></script>
+  <script src="app.js?v=20261108-offline"></script>
 </body>
 </html>

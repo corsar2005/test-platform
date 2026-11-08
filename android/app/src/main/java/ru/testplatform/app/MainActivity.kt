@@ -2,116 +2,45 @@ package ru.testplatform.app
 
 import android.app.Activity
 import android.content.Intent
-import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
-    private lateinit var errorView: LinearLayout
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        createContent()
+        webView = WebView(this)
+        setContentView(webView)
         configureWebView()
         if (savedInstanceState == null) {
-            webView.loadUrl(BuildConfig.PLATFORM_URL)
+            webView.loadUrl("file:///android_asset/index.html")
         } else {
             webView.restoreState(savedInstanceState)
         }
-    }
-
-    private fun createContent() {
-        webView = WebView(this)
-        errorView = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(32, 32, 32, 32)
-            setBackgroundColor(Color.WHITE)
-            visibility = View.GONE
-            addView(TextView(this@MainActivity).apply {
-                setText(R.string.connection_error)
-                setTextColor(Color.rgb(41, 51, 47))
-                textSize = 17f
-                gravity = Gravity.CENTER
-            })
-            addView(Button(this@MainActivity).apply {
-                setText(R.string.retry)
-                setOnClickListener {
-                    visibility = View.GONE
-                    webView.loadUrl(BuildConfig.PLATFORM_URL)
-                }
-            })
-        }
-        setContentView(FrameLayout(this).apply {
-            addView(webView, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            ))
-            addView(errorView, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            ))
-        })
     }
 
     private fun configureWebView() {
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
-            allowFileAccess = false
+            allowFileAccess = true
             allowContentAccess = true
-            cacheMode = WebSettings.LOAD_DEFAULT
+            blockNetworkLoads = true
+            cacheMode = WebSettings.LOAD_NO_CACHE
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageStarted(
-                view: WebView,
-                url: String,
-                favicon: android.graphics.Bitmap?,
-            ) {
-                errorView.visibility = View.GONE
-            }
-
-            override fun onReceivedError(
-                view: WebView,
-                request: WebResourceRequest,
-                error: WebResourceError,
-            ) {
-                if (request.isForMainFrame) {
-                    errorView.visibility = View.VISIBLE
-                }
-            }
-
-            override fun onReceivedHttpError(
-                view: WebView,
-                request: WebResourceRequest,
-                errorResponse: WebResourceResponse,
-            ) {
-                if (request.isForMainFrame && errorResponse.statusCode >= 500) {
-                    errorView.visibility = View.VISIBLE
-                }
-            }
-        }
+        webView.webViewClient = WebViewClient()
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView,

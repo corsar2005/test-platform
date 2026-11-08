@@ -1,5 +1,3 @@
 <resources>
     <string name="app_name">Python Test Lab</string>
-    <string name="connection_error">Не удалось подключиться к платформе. Проверьте подключение к интернету и попробуйте ещё раз.</string>
-    <string name="retry">Повторить</string>
 </resources>

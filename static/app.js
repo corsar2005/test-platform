@@ -29,6 +29,9 @@ function applyTheme(theme = getPreferredTheme()) {
 }
 
 function renderAccountBar(username) {
+  if (window.OFFLINE_MODE) {
+    return `<div class="account-bar"><span>Автономный режим · <strong>${escapeHtml(username)}</strong></span></div>`;
+  }
   return `<div class="account-bar"><span>Вы вошли как <strong>${escapeHtml(username)}</strong></span><div class="account-bar-actions"><button class="tool-button" id="logout-button">Выйти</button></div></div>`;
 }
 
@@ -230,6 +233,7 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('tests')}
     <h1>Выберите тему и сложность</h1>
+    ${window.OFFLINE_MODE ? '<p class="offline-notice">Приложение работает без интернета. Тесты, история и прогресс хранятся на этом устройстве.</p>' : ''}
     <section class="difficulty-section">
       <h2>Python</h2>
       <div class="difficulty-grid">${renderDifficultyCards(pythonDifficulties, 'python')}</div>
@@ -465,7 +469,7 @@ function renderStatistics() {
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('statistics')}
     <h1>Ваша статистика</h1>
-    <p class="lead">История изученных материалов и результаты каждой попытки сохраняются в аккаунте.</p>
+    <p class="lead">${window.OFFLINE_MODE ? 'История тестов и прогресс изучения сохраняются на этом устройстве.' : 'История изученных материалов и результаты каждой попытки сохраняются в аккаунте.'}</p>
     <section class="statistics-cards">
       <article class="statistics-card"><span>Изучено материалов</span><strong>${statisticsData.completed_material_count} / ${statisticsData.total_material_count}</strong>
         <progress max="${statisticsData.total_material_count}" value="${statisticsData.completed_material_count}" aria-label="Изученные материалы"></progress></article>

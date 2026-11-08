@@ -242,6 +242,7 @@ textarea:focus, .code-editor:focus { border-color: var(--accent); }
 .skeleton-option { border-radius: 9px; background: var(--card-soft); }
 .test-progress, .statistics-card, .auth-form { border-radius: 12px; }
 .progress-summary strong, .test-progress strong, .statistics-card > strong, .difficulty-card strong, .topic-card strong, .theory-card strong { color: var(--accent); }
+.offline-notice { margin: 20px 0; padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; color: var(--muted); background: var(--panel); font-size: var(--text-sm); }
 .submit-button:hover { background: #3d705d; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, .code-editor:focus-visible { outline: 3px solid rgba(71, 125, 104, .28); outline-offset: 2px; }
 @media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards, .skeleton-grid, .skeleton-statistics { grid-template-columns: minmax(0, 1fr); } }
