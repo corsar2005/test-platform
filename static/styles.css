@@ -244,5 +244,83 @@ textarea:focus, .code-editor:focus { border-color: var(--accent); }
 .submit-button:hover { background: #3d705d; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, .code-editor:focus-visible { outline: 3px solid rgba(71, 125, 104, .28); outline-offset: 2px; }
 @media (max-width: 700px) { .difficulty-grid, .theory-grid, .statistics-cards, .skeleton-grid, .skeleton-statistics { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 360px) { .view-tab { padding-right: 12px; padding-left: 12px; } }
-@media (max-width: 600px) { .shell { width: min(100% - 24px, 920px); padding-top: 35px; } .question { padding: 20px; } .test-progress { align-items: stretch; flex-direction: column; gap: 10px; } }
+@media (max-width: 700px) {
+  .table-scroll { margin-right: -16px; padding-right: 16px; overscroll-behavior-inline: contain; }
+  .stats-table { min-width: 580px; }
+}
+@media (max-width: 600px) {
+  html { -webkit-text-size-adjust: 100%; }
+  .shell {
+    width: calc(100% - 32px);
+    padding: calc(env(safe-area-inset-top) + 76px) 0 calc(env(safe-area-inset-bottom) + 32px);
+  }
+  .theme-toggle-wrap { top: calc(env(safe-area-inset-top) + 10px); right: 16px; }
+  .theme-toggle { min-height: 44px; padding: 10px 14px; }
+  h1 { font-size: clamp(2.25rem, 10vw, 3.25rem); }
+  .eyebrow { margin-bottom: 12px; }
+  .lead { margin: 16px 0 24px; font-size: 1rem; line-height: 1.6; }
+  .account-bar { align-items: flex-start; flex-wrap: wrap; margin-bottom: 22px; }
+  .account-bar-actions { margin-left: auto; }
+  .view-tabs {
+    position: sticky;
+    top: calc(env(safe-area-inset-top) + 56px);
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    margin: 0 -8px 24px;
+    padding: 4px 8px 0;
+    background: var(--surface);
+  }
+  .view-tab { min-width: 0; min-height: 48px; padding: 10px 4px; font-size: var(--text-xs); }
+  .test-progress { align-items: stretch; flex-direction: column; gap: 10px; margin: 0 0 20px; padding: 14px 16px; }
+  .test-progress > div { min-width: 0; }
+  .meta { gap: 8px; margin-bottom: 24px; font-size: 11px; }
+  .meta span { padding: 8px 10px; }
+  .meta .timer { margin-left: 0; font-size: 14px; }
+  .question { margin: 14px 0; padding: 18px 16px; }
+  .question h2 { font-size: 1.375rem; }
+  .question-number { letter-spacing: .06em; }
+  .option { min-height: 54px; padding: 12px; }
+  .option input { flex-basis: 20px; width: 20px; height: 20px; }
+  .written-tools { gap: 8px; }
+  .tool-button { min-height: 44px; padding: 11px 14px; }
+  .written-tools .tool-button { flex: 1 1 auto; }
+  .file-name { flex-basis: 100%; overflow-wrap: anywhere; }
+  textarea, .code-editor { min-height: 160px; padding: 14px; font-size: 16px; }
+  .submit-button { min-height: 52px; padding: 14px 20px; font-size: var(--text-sm); }
+  #test-form > .submit-button {
+    width: 100%;
+    margin-top: 18px;
+  }
+  .auth-form { margin-top: 22px; padding: 20px 16px; }
+  .auth-form input { min-height: 48px; font-size: 16px; }
+  .difficulty-grid, .theory-grid { gap: 10px; margin-top: 20px; }
+  .difficulty-section { margin-top: 26px; }
+  .difficulty-card, .topic-card, .theory-card { min-height: 0; padding: 18px; }
+  .difficulty-card strong { margin-top: 18px; font-size: 2.5rem; }
+  .difficulty-card .subject-name { font-size: 2rem; }
+  .topic-card strong, .theory-card strong { margin-top: 16px; }
+  .start-label { margin-top: 14px; }
+  .statistics-cards { gap: 10px; margin: 24px 0; }
+  .statistics-card { padding: 18px; }
+  .statistics-card > strong { font-size: 2rem; }
+  .statistics-history { margin-top: 26px; }
+  .statistics-history h2 { font-size: 1.35rem; }
+  .result { margin-top: 24px; padding: 18px; }
+  .result h2 { font-size: 1.5rem; }
+  .theory-section { margin: 18px 0; padding: 18px; }
+  .theory-section pre { padding: 14px; font-size: var(--text-xs); }
+  .article-cta { margin: 26px 0; padding: 20px; }
+}
+@media (max-width: 360px) {
+  .shell { width: calc(100% - 24px); }
+  .view-tabs { margin-right: -4px; margin-left: -4px; padding-right: 4px; padding-left: 4px; }
+  .view-tab { font-size: 11px; }
+  .meta { letter-spacing: .04em; }
+  .question { padding-right: 14px; padding-left: 14px; }
+  .table-scroll { margin-right: -12px; padding-right: 12px; }
+}
+@media (hover: none) {
+  .difficulty-card:hover, .topic-card:hover, .theory-card:hover { transform: none; box-shadow: none; }
+}
