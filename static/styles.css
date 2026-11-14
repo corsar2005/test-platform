@@ -243,6 +243,7 @@ progress::-moz-progress-bar { border-radius: 999px; background: var(--accent); }
 .statistics-history .stats-table td:first-child { white-space: nowrap; }
 .statistics-history .stats-table td:nth-child(2) { text-align: left; white-space: normal; }
 .table-scroll { overflow-x: auto; }
+.result .table-scroll { width: 100%; min-width: 0; max-width: 100%; margin: 0; padding: 0; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
 .result .result-grade { color: var(--ink); font-size: 18px; }
 .result-grade strong { font-size: 22px; }
 .grade-2 { color: var(--orange); }

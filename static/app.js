@@ -660,14 +660,14 @@ async function submitTest(event, timedOut = false) {
       <h2>Результат: <strong>${result.score} / ${result.max_score}</strong></h2>
       <p class="result-grade">Оценка: <strong>${result.grade} · ${escapeHtml(result.grade_label)}</strong>${result.written_pending ? ' (предварительная, без проверки письменного ответа)' : ''}</p>
       <p>${result.written_pending ? 'Письменное задание сохранено и ожидает ручной проверки.' : 'Тест проверен.'}</p>
-      <table class="stats-table">
+      <div class="table-scroll"><table class="stats-table">
         <thead><tr><th>Показатель</th><th>Количество</th><th>Процент</th></tr></thead>
         <tbody>
           <tr class="stats-correct"><td>Правильные ответы</td><td>${correctCount}</td><td>${correctPercent}%</td></tr>
           <tr class="stats-incorrect"><td>Неправильные ответы</td><td>${incorrectCount}</td><td>${incorrectPercent}%</td></tr>
           <tr><td>Результат по баллам</td><td>${result.score} из ${result.max_score}</td><td>${scorePercent}%</td></tr>
         </tbody>
-      </table>
+      </table></div>
       <div class="review"><h3>Ответы для самопроверки</h3>${review}</div>
     </div>`);
     button.remove();
