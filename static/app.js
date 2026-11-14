@@ -170,7 +170,7 @@ function questionTemplate(question, index) {
 }
 
 function renderTest() {
-  app.innerHTML = `<button class="article-back" id="test-back">← Назад</button>
+  app.innerHTML = `<button class="article-back" id="test-back"><span class="button-arrow" aria-hidden="true">←</span> Назад</button>
     <p class="eyebrow">${escapeHtml(testData.subject_label || 'Python')} / практика</p>
     <h1>${escapeHtml(testData.title)}</h1>
     <p class="lead">${escapeHtml(testData.subtitle)}. Письменное задание можно решить прямо здесь или передать готовым файлом.</p>
@@ -180,7 +180,7 @@ function renderTest() {
       <progress id="test-progress-bar" max="${testData.question_count}" value="0" aria-label="Прогресс выполнения теста"></progress>
     </section>
     <form id="test-form">${testData.questions.map(questionTemplate).join('')}
-      <button class="submit-button" type="submit">Проверить тест →</button>
+      <button class="submit-button" type="submit">Проверить тест <span class="button-arrow" aria-hidden="true">→</span></button>
     </form>`;
 
   window.scrollTo(0, 0);
@@ -260,7 +260,7 @@ function renderDifficultyCards(difficulties, subject) {
       <span class="difficulty-label">${escapeHtml(difficulty.label)}</span>
       <strong>${difficulty.question_count}</strong>
       <small>уникальных вопросов</small>
-      <span class="start-label">${difficulty.question_count < 20 ? 'Недоступно' : 'Начать тест →'}</span>
+      <span class="start-label">${difficulty.question_count < 20 ? 'Недоступно' : 'Начать тест <span class="button-arrow" aria-hidden="true">→</span>'}</span>
     </button>`).join('');
 }
 
@@ -278,7 +278,7 @@ function renderPythonBasicsTopics() {
       <span class="difficulty-label">ТЕСТ ПО ТЕМЕ</span>
       <strong>${title}</strong>
       <small>${description}</small>
-      <span class="start-label">Начать тест →</span>
+      <span class="start-label">Начать тест <span class="button-arrow" aria-hidden="true">→</span></span>
     </button>`).join('');
 }
 
@@ -472,7 +472,9 @@ function renderTheoryIndex() {
         <span class="difficulty-label">${escapeHtml(article.category)}</span>
         <strong>${escapeHtml(article.title)}</strong>
         <small>${escapeHtml(article.summary)}</small>
-        <span class="start-label">${completedArticles.has(article.id) ? '✓ Изучено · Читать снова →' : 'Читать статью →'}</span>
+        <span class="start-label">${completedArticles.has(article.id)
+          ? '✓ Изучено · Читать снова <span class="button-arrow" aria-hidden="true">→</span>'
+          : 'Читать статью <span class="button-arrow" aria-hidden="true">→</span>'}</span>
       </button>`).join('')}
     </div>`;
   bindWorkspaceTabs();
@@ -497,7 +499,7 @@ function renderTheoryArticle(article) {
   app.innerHTML = `<p class="eyebrow">Python Test Lab / материалы</p>
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('theory')}
-    <button class="article-back" id="theory-back">← Назад</button>
+    <button class="article-back" id="theory-back"><span class="button-arrow" aria-hidden="true">←</span> Назад</button>
     <article class="theory-article">
       <p class="difficulty-label">${escapeHtml(article.category)}</p>
       <h1>${escapeHtml(article.title)}</h1>
@@ -509,7 +511,7 @@ function renderTheoryArticle(article) {
         <button class="tool-button" id="mark-material-button" ${statisticsData?.completed_article_ids.includes(article.id) ? 'disabled' : ''}>
           ${statisticsData?.completed_article_ids.includes(article.id) ? 'Материал изучен ✓' : 'Отметить материал изученным'}
         </button>
-        <button class="submit-button" id="article-test-button">Перейти к тесту →</button>
+        <button class="submit-button" id="article-test-button">Перейти к тесту <span class="button-arrow" aria-hidden="true">→</span></button>
       </div>
     </article>`;
   bindWorkspaceTabs();
