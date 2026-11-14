@@ -44,6 +44,47 @@ function bindThemeToggle() {
   };
 }
 
+function setAppRoute(route, replace = false) {
+  const currentRoute = window.history.state?.appRoute;
+  if (!replace && JSON.stringify(currentRoute) === JSON.stringify(route)) return;
+  const method = replace ? 'replaceState' : 'pushState';
+  window.history[method]({ appRoute: route }, '', window.location.href);
+}
+
+function navigateApp(route, render, replace = false) {
+  setAppRoute(route, replace);
+  render();
+}
+
+async function restoreAppRoute(route) {
+  if (route.view === 'theory') {
+    loadTheoryIndex();
+  } else if (route.view === 'article') {
+    renderLoadingSkeleton('theory');
+    try {
+      await loadStatisticsData();
+      const article = THEORY_ARTICLES.find((item) => item.id === route.articleId);
+      if (article) renderTheoryArticle(article);
+      else renderTheoryIndex();
+    } catch (error) {
+      app.innerHTML = `<p class="error">${escapeHtml(error.message)}</p><button class="auth-switch" id="retry-statistics">Повторить</button>`;
+      document.querySelector('#retry-statistics').addEventListener('click', () => restoreAppRoute(route));
+    }
+  } else if (route.view === 'statistics') {
+    loadStatistics();
+  } else if (route.view === 'test') {
+    loadTest(route.difficulty, route.subject);
+  } else if (route.view === 'auth') {
+    renderAuth(route.mode);
+  } else {
+    loadDifficulties(route.subject || 'python');
+  }
+}
+
+window.addEventListener('popstate', (event) => {
+  restoreAppRoute(event.state?.appRoute || { view: 'tests', subject: 'python' });
+});
+
 applyTheme();
 bindThemeToggle();
 
@@ -327,13 +368,19 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
   document.querySelectorAll('.difficulty-card:not([disabled])').forEach((button) => {
     button.addEventListener('click', () => {
       selectedSubject = button.dataset.subject;
-      loadTest(button.dataset.difficulty, selectedSubject);
+      navigateApp(
+        { view: 'test', difficulty: button.dataset.difficulty, subject: selectedSubject },
+        () => loadTest(button.dataset.difficulty, selectedSubject),
+      );
     });
   });
   document.querySelectorAll('.topic-card').forEach((button) => {
     button.addEventListener('click', () => {
       selectedSubject = button.dataset.subject;
-      loadTest('medium', selectedSubject);
+      navigateApp(
+        { view: 'test', difficulty: 'medium', subject: selectedSubject },
+        () => loadTest('medium', selectedSubject),
+      );
     });
   });
   bindWorkspaceTabs();
@@ -360,9 +407,13 @@ function bindWorkspaceTabs() {
   bindThemeToggle();
   document.querySelectorAll('.view-tab').forEach((button) => {
     button.addEventListener('click', () => {
-      if (button.dataset.view === 'theory') loadTheoryIndex();
-      else if (button.dataset.view === 'statistics') loadStatistics();
-      else loadDifficulties('python');
+      if (button.dataset.view === 'theory') {
+        navigateApp({ view: 'theory' }, loadTheoryIndex);
+      } else if (button.dataset.view === 'statistics') {
+        navigateApp({ view: 'statistics' }, loadStatistics);
+      } else {
+        navigateApp({ view: 'tests', subject: 'python' }, () => loadDifficulties('python'));
+      }
     });
   });
   const logoutButton = document.querySelector('#logout-button');
@@ -370,6 +421,7 @@ function bindWorkspaceTabs() {
     logoutButton.addEventListener('click', async () => {
       await fetch('/api/auth/logout', { method: 'POST' });
       currentUser = null;
+      setAppRoute({ view: 'auth', mode: 'login' }, true);
       renderAuth();
     });
   }
@@ -414,7 +466,9 @@ function renderTheoryIndex() {
   document.querySelectorAll('.theory-card').forEach((button) => {
     button.addEventListener('click', () => {
       const article = THEORY_ARTICLES.find((item) => item.id === button.dataset.article);
-      if (article) renderTheoryArticle(article);
+      if (article) {
+        navigateApp({ view: 'article', articleId: article.id }, () => renderTheoryArticle(article));
+      }
     });
   });
 }
@@ -446,7 +500,10 @@ function renderTheoryArticle(article) {
       </div>
     </article>`;
   bindWorkspaceTabs();
-  document.querySelector('#theory-back').addEventListener('click', renderTheoryIndex);
+  document.querySelector('#theory-back').addEventListener('click', () => {
+    if (window.history.state?.appRoute?.view === 'article') window.history.back();
+    else renderTheoryIndex();
+  });
   document.querySelector('#mark-material-button').addEventListener('click', async (event) => {
     const button = event.currentTarget;
     button.disabled = true;
@@ -465,7 +522,12 @@ function renderTheoryArticle(article) {
       button.insertAdjacentHTML('afterend', `<p class="error">${escapeHtml(error.message)}</p>`);
     }
   });
-  document.querySelector('#article-test-button').addEventListener('click', () => loadTest('medium', article.subject));
+  document.querySelector('#article-test-button').addEventListener('click', () => {
+    navigateApp(
+      { view: 'test', difficulty: 'medium', subject: article.subject },
+      () => loadTest('medium', article.subject),
+    );
+  });
 }
 
 async function loadStatistics() {
@@ -521,7 +583,10 @@ function renderAuth(mode = 'login', error = '') {
       <button class="submit-button" type="submit">${register ? 'Зарегистрироваться' : 'Войти'}</button>
     </form>
     <button class="auth-switch" id="auth-switch">${register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>`;
-  document.querySelector('#auth-switch').addEventListener('click', () => renderAuth(register ? 'login' : 'register'));
+  document.querySelector('#auth-switch').addEventListener('click', () => {
+    const mode = register ? 'login' : 'register';
+    navigateApp({ view: 'auth', mode }, () => renderAuth(mode));
+  });
   bindThemeToggle();
   document.querySelector('#auth-form').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -565,7 +630,10 @@ function renderAuth(mode = 'login', error = '') {
       submitButton.disabled = false;
       submitButton.textContent = register ? 'Зарегистрироваться' : 'Войти';
     }
-    if (succeeded) loadDifficulties('python');
+    if (succeeded) {
+      setAppRoute({ view: 'tests', subject: 'python' }, true);
+      loadDifficulties('python');
+    }
   });
 }
 
@@ -601,7 +669,13 @@ async function loadTest(difficulty, subject = selectedSubject) {
     renderTest();
   } catch (error) {
     app.innerHTML = `<p class="error">${escapeHtml(error.message || 'Сервер недоступен')}</p><button class="auth-switch" id="retry-button">Вернуться к уровням</button>`;
-    document.querySelector('#retry-button').addEventListener('click', () => loadDifficulties('python'));
+    document.querySelector('#retry-button').addEventListener('click', () => {
+      navigateApp(
+        { view: 'tests', subject: 'python' },
+        () => loadDifficulties('python'),
+        true,
+      );
+    });
   }
 }
 
@@ -676,8 +750,13 @@ async function submitTest(event, timedOut = false) {
 }
 
 renderLoadingSkeleton('workspace');
+setAppRoute({ view: 'tests', subject: 'python' }, true);
 fetch('/api/auth/me').then(async (response) => {
-  if (!response.ok) { renderAuth(); return; }
+  if (!response.ok) {
+    setAppRoute({ view: 'auth', mode: 'login' }, true);
+    renderAuth();
+    return;
+  }
   currentUser = await response.json();
   loadDifficulties('python');
 }).catch(() => { app.innerHTML = '<p class="error">Не удалось подключиться к серверу.</p>'; });
