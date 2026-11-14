@@ -170,7 +170,8 @@ function questionTemplate(question, index) {
 }
 
 function renderTest() {
-  app.innerHTML = `<p class="eyebrow">${escapeHtml(testData.subject_label || 'Python')} / практика</p>
+  app.innerHTML = `<button class="article-back" id="test-back">← Назад</button>
+    <p class="eyebrow">${escapeHtml(testData.subject_label || 'Python')} / практика</p>
     <h1>${escapeHtml(testData.title)}</h1>
     <p class="lead">${escapeHtml(testData.subtitle)}. Письменное задание можно решить прямо здесь или передать готовым файлом.</p>
     <div class="meta"><span>${testData.question_count} заданий в попытке</span>${testData.is_topic_test ? '' : `<span>уровень: ${escapeHtml(testData.difficulty_label || testData.difficulty)}</span>`}<span>случайная выборка</span><span class="timer" id="timer">20:00</span></div>
@@ -182,6 +183,18 @@ function renderTest() {
       <button class="submit-button" type="submit">Проверить тест →</button>
     </form>`;
 
+  window.scrollTo(0, 0);
+  document.querySelector('#test-back').addEventListener('click', () => {
+    if (window.history.state?.appRoute?.view === 'test' && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    navigateApp(
+      { view: 'tests', subject: 'python' },
+      () => loadDifficulties('python'),
+      true,
+    );
+  });
   document.querySelectorAll('.question').forEach((section) => {
     section.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((input) => input.addEventListener('change', () => collectAnswer(section)));
     section.querySelector('.written-answer')?.addEventListener('input', () => collectAnswer(section));
@@ -484,7 +497,7 @@ function renderTheoryArticle(article) {
   app.innerHTML = `<p class="eyebrow">Python Test Lab / материалы</p>
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('theory')}
-    <button class="article-back" id="theory-back">← Все статьи</button>
+    <button class="article-back" id="theory-back">← Назад</button>
     <article class="theory-article">
       <p class="difficulty-label">${escapeHtml(article.category)}</p>
       <h1>${escapeHtml(article.title)}</h1>
