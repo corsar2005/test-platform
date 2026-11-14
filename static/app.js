@@ -232,7 +232,30 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
   app.innerHTML = `<p class="eyebrow">Python Test Lab / практика</p>
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('tests')}
-    <h1>Выберите тему и сложность</h1>
+    <section class="welcome-hero">
+      <div class="welcome-hero-copy">
+        <p class="hero-kicker">Твоя практика начинается здесь</p>
+        <h1>Учись. Практикуйся. <span>Расти.</span></h1>
+        <p>Выбери тему и подходящий уровень — короткий шаг сегодня приблизит к большой цели.</p>
+      </div>
+      <svg class="hero-illustration" viewBox="0 0 300 230" role="img" aria-labelledby="hero-title hero-description">
+        <title id="hero-title">Рабочее место разработчика</title>
+        <desc id="hero-description">Ноутбук с цветным кодом, звёзды и листочки.</desc>
+        <circle class="hero-orbit" cx="153" cy="112" r="91" />
+        <path class="hero-spark" d="M47 64v20m-10-10h20M252 65v15m-8-7h16M70 177v12m-6-6h12" />
+        <path class="hero-leaf" d="M232 157c4-26 20-38 44-37-4 23-17 37-44 37Zm0 0c-1-15-8-24-20-29 0 15 6 24 20 29Z" />
+        <rect class="hero-screen" x="61" y="58" width="170" height="116" rx="17" />
+        <path class="hero-screen-top" d="M61 75h170" />
+        <circle class="hero-window-dot" cx="77" cy="67" r="3" />
+        <circle class="hero-window-dot hero-window-dot-warm" cx="89" cy="67" r="3" />
+        <path class="hero-code hero-code-purple" d="m93 101-10 8 10 8m16-16 10 8-10 8" />
+        <path class="hero-code hero-code-green" d="M137 102h45m-45 14h33" />
+        <path class="hero-code hero-code-warm" d="M94 139h24m12 0h55m-91 14h58" />
+        <path class="hero-base" d="M49 180h194l-16 15H65l-16-15Z" />
+        <rect class="hero-sticker" x="188" y="112" width="45" height="45" rx="15" transform="rotate(10 188 112)" />
+        <path class="hero-sticker-mark" d="m205 131 5 5 10-12" />
+      </svg>
+    </section>
     ${window.OFFLINE_MODE ? '<p class="offline-notice">Приложение работает без интернета. Тесты, история и прогресс хранятся на этом устройстве.</p>' : ''}
     <section class="difficulty-section">
       <h2>Python</h2>
