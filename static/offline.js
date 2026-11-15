@@ -57,11 +57,14 @@
     store = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') || {
       attempts: [],
       completedArticleIds: [],
+      passedArticleIds: [],
     };
   } catch (error) {
     storageError = error;
-    store = { attempts: [], completedArticleIds: [] };
+    store = { attempts: [], completedArticleIds: [], passedArticleIds: [] };
   }
+  if (!Array.isArray(store.completedArticleIds)) store.completedArticleIds = [];
+  if (!Array.isArray(store.passedArticleIds)) store.passedArticleIds = [];
 
   const saveStore = () => {
     if (storageError) throw new Error(`Не удалось открыть локальное хранилище: ${storageError.message}`);
@@ -95,6 +98,8 @@
       completed_article_ids: store.completedArticleIds,
       completed_material_count: store.completedArticleIds.length,
       total_material_count: ARTICLE_IDS.length,
+      passed_article_ids: store.passedArticleIds,
+      passed_topic_count: store.passedArticleIds.length,
       completed_test_count: store.attempts.length,
       average_score_percent: scoredAttempts.length
         ? Number((scoredAttempts.reduce((sum, attempt) => sum + attempt.score_percent, 0) / scoredAttempts.length).toFixed(1))
@@ -256,6 +261,12 @@
         written_pending: result.written_pending,
         created_at: new Date().toISOString(),
       });
+      if (correctCount > 18) {
+        const passedArticleId = body.subject === 'python_bases' ? 'python' : body.subject;
+        if (ARTICLE_IDS.includes(passedArticleId) && !store.passedArticleIds.includes(passedArticleId)) {
+          store.passedArticleIds.push(passedArticleId);
+        }
+      }
       saveStore();
       return response(result);
     }

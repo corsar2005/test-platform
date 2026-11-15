@@ -458,6 +458,47 @@ def test_submit_saves_grade_answers_and_statistics(
     assert statistics["attempts"][0]["score_percent"] == 85.0
 
 
+def test_statistics_unlock_topics_only_after_nineteen_correct_answers(
+    test_client: TestClient,
+    test_session_factory: sessionmaker,
+) -> None:
+    register_user(test_client)
+    questions = create_test_questions(test_session_factory, subject="py_conditions")
+
+    failed_response = test_client.post(
+        "/api/submit",
+        json=submission_payload(questions, correct_count=18, subject="py_conditions"),
+    )
+    assert failed_response.status_code == 200
+    assert test_client.get("/api/statistics").json()["passed_article_ids"] == []
+
+    passed_response = test_client.post(
+        "/api/submit",
+        json=submission_payload(questions, correct_count=19, subject="py_conditions"),
+    )
+    assert passed_response.status_code == 200
+    statistics = test_client.get("/api/statistics").json()
+    assert statistics["passed_article_ids"] == ["py_conditions"]
+    assert statistics["passed_topic_count"] == 1
+    assert statistics["completed_article_ids"] == []
+
+
+def test_statistics_maps_python_bases_pass_to_python_article(
+    test_client: TestClient,
+    test_session_factory: sessionmaker,
+) -> None:
+    register_user(test_client)
+    questions = create_test_questions(test_session_factory, subject="python_bases")
+
+    response = test_client.post(
+        "/api/submit",
+        json=submission_payload(questions, correct_count=19, subject="python_bases"),
+    )
+
+    assert response.status_code == 200
+    assert test_client.get("/api/statistics").json()["passed_article_ids"] == ["python"]
+
+
 def test_submit_marks_written_answers_as_pending(
     test_client: TestClient,
     test_session_factory: sessionmaker,
@@ -565,8 +606,9 @@ def test_index_revalidates_html_and_references_versioned_assets(test_client: Tes
 
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache, must-revalidate"
-    assert "app.js?v=20261107-theme-toggle" in response.text
-    assert "styles.css?v=20261107-typography" in response.text
+    assert "app.js?v=20261115-topic-gating" in response.text
+    assert "offline.js?v=20261115-topic-gating" in response.text
+    assert "styles.css?v=20261115-topic-gating" in response.text
 
 
 def test_batch_difficulties_returns_unique_counts_for_requested_subjects(

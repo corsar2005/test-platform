@@ -64,8 +64,11 @@ async function restoreAppRoute(route) {
     try {
       await loadStatisticsData();
       const article = THEORY_ARTICLES.find((item) => item.id === route.articleId);
-      if (article) renderTheoryArticle(article);
-      else renderTheoryIndex();
+      if (article && getUnlockedTheoryArticleIds(statisticsData.passed_article_ids).has(article.id)) {
+        renderTheoryArticle(article);
+      } else {
+        renderTheoryIndex();
+      }
     } catch (error) {
       app.innerHTML = `<p class="error">${escapeHtml(error.message)}</p><button class="auth-switch" id="retry-statistics">Повторить</button>`;
       document.querySelector('#retry-statistics').addEventListener('click', () => restoreAppRoute(route));
@@ -254,17 +257,20 @@ function updateTimer() {
   }
 }
 
-function renderDifficultyCards(difficulties, subject) {
+function renderDifficultyCards(difficulties, subject, unlockedArticleIds) {
+  const article = findTheoryArticle(subject);
+  const isLocked = article && !unlockedArticleIds.has(article.id);
+  const lockLabel = isLocked ? getTopicLockLabel(article.id) : '';
   return difficulties.map((difficulty) => `
-    <button class="difficulty-card" data-difficulty="${difficulty.id}" data-subject="${subject}" ${difficulty.question_count < 20 ? 'disabled' : ''}>
+    <button class="difficulty-card ${isLocked ? 'is-locked' : ''}" data-difficulty="${difficulty.id}" data-subject="${subject}" ${isLocked || difficulty.question_count < 20 ? 'disabled aria-disabled="true"' : ''}>
       <span class="difficulty-label">${escapeHtml(difficulty.label)}</span>
       <strong>${difficulty.question_count}</strong>
       <small>уникальных вопросов</small>
-      <span class="start-label">${difficulty.question_count < 20 ? 'Недоступно' : 'Начать тест <span class="button-arrow" aria-hidden="true">→</span>'}</span>
+      <span class="start-label">${lockLabel || (difficulty.question_count < 20 ? 'Недоступно' : 'Начать тест <span class="button-arrow" aria-hidden="true">→</span>')}</span>
     </button>`).join('');
 }
 
-function renderPythonBasicsTopics() {
+function renderPythonBasicsTopics(unlockedArticleIds) {
   const topics = [
     ['py_conditions', 'Условный оператор', 'if, elif, else и логические условия'],
     ['py_strings', 'Строки', 'Индексы, срезы и строковые методы'],
@@ -273,16 +279,20 @@ function renderPythonBasicsTopics() {
     ['py_oop', 'ООП', 'Классы, объекты, методы и наследование'],
     ['py_functions', 'Функции', 'Аргументы, параметры и возвращаемые значения'],
   ];
-  return topics.map(([subject, title, description]) => `
-    <button class="topic-card" data-subject="${subject}">
+  return topics.map(([subject, title, description]) => {
+    const isLocked = !unlockedArticleIds.has(subject);
+    const lockLabel = isLocked ? getTopicLockLabel(subject) : '';
+    return `<button class="topic-card ${isLocked ? 'is-locked' : ''}" data-subject="${subject}" ${isLocked ? 'disabled aria-disabled="true"' : ''}>
       <span class="difficulty-label">ТЕСТ ПО ТЕМЕ</span>
       <strong>${title}</strong>
       <small>${description}</small>
-      <span class="start-label">Начать тест <span class="button-arrow" aria-hidden="true">→</span></span>
-    </button>`).join('');
+      <span class="start-label">${lockLabel || 'Начать тест <span class="button-arrow" aria-hidden="true">→</span>'}</span>
+    </button>`;
+  }).join('');
 }
 
 function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiogramDifficulties, threadingDifficulties, multiprocessingDifficulties, asyncioDifficulties, generatorDifficulties, decoratorDifficulties, regexDifficulties, pandasDifficulties, unittestDifficulties, pytestDifficulties, linterDifficulties, filesFormatsDifficulties, databasesDifficulties) {
+  const unlockedArticleIds = getUnlockedTheoryArticleIds(statisticsData?.passed_article_ids || []);
   app.innerHTML = `<p class="eyebrow">Python Test Lab / практика</p>
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('tests')}
@@ -313,70 +323,70 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
     ${window.OFFLINE_MODE ? '<p class="offline-notice">Приложение работает без интернета. Тесты, история и прогресс хранятся на этом устройстве.</p>' : ''}
     <section class="difficulty-section">
       <h2>Python</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(pythonDifficulties, 'python')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(pythonDifficulties, 'python', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>FastAPI</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(fastapiDifficulties, 'fastapi')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(fastapiDifficulties, 'fastapi', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Создание ботов на aiogram</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(aiogramDifficulties, 'aiogram')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(aiogramDifficulties, 'aiogram', unlockedArticleIds)}</div>
     </section>`;
   app.querySelector('.difficulty-section:last-child').insertAdjacentHTML('afterend', `
     <section class="difficulty-section">
       <h2>Многопоточность</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(threadingDifficulties, 'threading')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(threadingDifficulties, 'threading', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Многопроцессорность</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(multiprocessingDifficulties, 'multiprocessing')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(multiprocessingDifficulties, 'multiprocessing', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Асинхронность</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(asyncioDifficulties, 'asyncio')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(asyncioDifficulties, 'asyncio', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Генератор</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(generatorDifficulties, 'generator')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(generatorDifficulties, 'generator', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Декоратор</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(decoratorDifficulties, 'decorator')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(decoratorDifficulties, 'decorator', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Регулярные выражения</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(regexDifficulties, 'regex')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(regexDifficulties, 'regex', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Pandas</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(pandasDifficulties, 'pandas')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(pandasDifficulties, 'pandas', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>unittest</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(unittestDifficulties, 'unittest')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(unittestDifficulties, 'unittest', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>pytest</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(pytestDifficulties, 'pytest')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(pytestDifficulties, 'pytest', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Линтеры</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(linterDifficulties, 'linters')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(linterDifficulties, 'linters', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Работа с файлами и форматами</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(filesFormatsDifficulties, 'files_formats')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(filesFormatsDifficulties, 'files_formats', unlockedArticleIds)}</div>
     </section>
     <section class="difficulty-section">
       <h2>Базы данных: PostgreSQL, SQLite и MySQL</h2>
-      <div class="difficulty-grid">${renderDifficultyCards(databasesDifficulties, 'databases')}</div>
+      <div class="difficulty-grid">${renderDifficultyCards(databasesDifficulties, 'databases', unlockedArticleIds)}</div>
     </section>`);
   app.querySelector('.difficulty-section').insertAdjacentHTML('afterend', `
     <section class="difficulty-section">
       <h2>Основы Python</h2>
       <p class="lead">Условия, строки, списки и структуры данных, циклы, ООП и функции.</p>
-      <div class="difficulty-grid topic-grid">${renderPythonBasicsTopics()}</div>
+      <div class="difficulty-grid topic-grid">${renderPythonBasicsTopics(unlockedArticleIds)}</div>
     </section>`);
   document.querySelectorAll('.difficulty-card:not([disabled])').forEach((button) => {
     button.addEventListener('click', () => {
@@ -387,7 +397,7 @@ function renderDifficultySelection(pythonDifficulties, fastapiDifficulties, aiog
       );
     });
   });
-  document.querySelectorAll('.topic-card').forEach((button) => {
+  document.querySelectorAll('.topic-card:not([disabled])').forEach((button) => {
     button.addEventListener('click', () => {
       selectedSubject = button.dataset.subject;
       navigateApp(
@@ -461,24 +471,45 @@ async function loadTheoryIndex() {
 
 function renderTheoryIndex() {
   const completedArticles = new Set(statisticsData?.completed_article_ids || []);
+  const passedArticles = new Set(statisticsData?.passed_article_ids || []);
+  const unlockedArticles = getUnlockedTheoryArticleIds(passedArticles);
+  let passedTopicCount = 0;
+  while (passedTopicCount < THEORY_ARTICLES.length
+    && passedArticles.has(THEORY_ARTICLES[passedTopicCount].id)) {
+    passedTopicCount += 1;
+  }
   app.innerHTML = `<p class="eyebrow">Python Test Lab / материалы</p>
     ${renderAccountBar(currentUser.username)}
     ${renderWorkspaceTabs('theory')}
     <h1>Теория</h1>
     <p class="lead">Краткие статьи помогут повторить ключевые понятия перед тестированием. Выберите тему, чтобы открыть материал.</p>
+    <section class="course-progress" aria-label="Общий прогресс по темам">
+      <div><span>Общий прогресс</span><strong>${passedTopicCount} / ${THEORY_ARTICLES.length} тем</strong></div>
+      <progress max="${THEORY_ARTICLES.length}" value="${passedTopicCount}" aria-label="Пройденные темы"></progress>
+    </section>
     <p class="progress-summary">Изучено материалов: <strong>${statisticsData.completed_material_count} / ${statisticsData.total_material_count}</strong></p>
-    <div class="theory-grid">${THEORY_ARTICLES.map((article) => `
-      <button class="theory-card ${completedArticles.has(article.id) ? 'is-completed' : ''}" data-article="${escapeHtml(article.id)}">
+    <div class="theory-grid">${THEORY_ARTICLES.map((article, index) => {
+      const isLocked = !unlockedArticles.has(article.id);
+      const isPassed = passedArticles.has(article.id);
+      const isCompleted = completedArticles.has(article.id);
+      const previousArticle = THEORY_ARTICLES[index - 1];
+      const actionLabel = isLocked
+        ? `🔒 Сначала пройдите «${escapeHtml(previousArticle.title)}»`
+        : isPassed
+          ? '✓ Тема пройдена · Читать снова'
+          : isCompleted
+            ? '✓ Изучено · Читать снова'
+            : 'Читать статью';
+      return `<button class="theory-card ${isCompleted ? 'is-completed' : ''} ${isPassed ? 'is-passed' : ''} ${isLocked ? 'is-locked' : ''}" data-article="${escapeHtml(article.id)}" ${isLocked ? 'disabled aria-disabled="true"' : ''}>
         <span class="difficulty-label">${escapeHtml(article.category)}</span>
         <strong>${escapeHtml(article.title)}</strong>
         <small>${escapeHtml(article.summary)}</small>
-        <span class="start-label">${completedArticles.has(article.id)
-          ? '✓ Изучено · Читать снова <span class="button-arrow" aria-hidden="true">→</span>'
-          : 'Читать статью <span class="button-arrow" aria-hidden="true">→</span>'}</span>
-      </button>`).join('')}
+        <span class="start-label">${actionLabel}${isLocked ? '' : ' <span class="button-arrow" aria-hidden="true">→</span>'}</span>
+      </button>`;
+    }).join('')}
     </div>`;
   bindWorkspaceTabs();
-  document.querySelectorAll('.theory-card').forEach((button) => {
+  document.querySelectorAll('.theory-card:not(.is-locked)').forEach((button) => {
     button.addEventListener('click', () => {
       const article = THEORY_ARTICLES.find((item) => item.id === button.dataset.article);
       if (article) {
@@ -587,7 +618,24 @@ function renderStatistics() {
 }
 
 function findTheoryArticle(subject) {
+  if (subject === 'python_bases') subject = 'python';
   return THEORY_ARTICLES.find((article) => article.subject === subject || article.id === subject);
+}
+
+function getUnlockedTheoryArticleIds(passedArticleIds = []) {
+  const passedArticles = new Set(passedArticleIds);
+  const unlockedArticles = new Set();
+  for (const article of THEORY_ARTICLES) {
+    if (unlockedArticles.size && !passedArticles.has(THEORY_ARTICLES[unlockedArticles.size - 1].id)) break;
+    unlockedArticles.add(article.id);
+  }
+  return unlockedArticles;
+}
+
+function getTopicLockLabel(articleId) {
+  const articleIndex = THEORY_ARTICLES.findIndex((article) => article.id === articleId);
+  if (articleIndex <= 0) return '';
+  return `🔒 Сначала пройдите «${escapeHtml(THEORY_ARTICLES[articleIndex - 1].title)}»`;
 }
 
 function renderAuth(mode = 'login', error = '') {
@@ -666,6 +714,7 @@ async function loadDifficulties(subject = selectedSubject) {
     const response = await fetch(`/api/difficulties/batch?${params}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || 'Не удалось загрузить уровни сложности.');
+    await loadStatisticsData();
     renderDifficultySelection(
       ...subjects.map((id) => data.difficulties[id]),
     );
@@ -681,6 +730,19 @@ async function loadTest(difficulty, subject = selectedSubject) {
   answers.clear();
   renderLoadingSkeleton('test');
   try {
+    const article = findTheoryArticle(subject);
+    if (article) {
+      await loadStatisticsData();
+      const unlockedArticleIds = getUnlockedTheoryArticleIds(statisticsData.passed_article_ids);
+      if (!unlockedArticleIds.has(article.id)) {
+        app.innerHTML = `<p class="error">Сначала пройдите предыдущую тему, чтобы открыть «${escapeHtml(article.title)}».</p>
+          <button class="auth-switch" id="return-to-theory">Перейти к теории</button>`;
+        document.querySelector('#return-to-theory').addEventListener('click', () => {
+          navigateApp({ view: 'theory' }, loadTheoryIndex);
+        });
+        return;
+      }
+    }
     const response = await fetch(`/api/test?difficulty=${encodeURIComponent(difficulty)}&subject=${encodeURIComponent(subject)}`);
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Не удалось загрузить тест этого уровня');

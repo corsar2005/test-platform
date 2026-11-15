@@ -3205,6 +3205,24 @@ def get_statistics(
     completed_article_ids = db.scalars(
         select(ArticleProgress.article_id).where(ArticleProgress.user_id == user.id)
     ).all()
+    passed_subjects = db.scalars(
+        select(Submission.subject)
+        .join(Answer, Answer.submission_id == Submission.id)
+        .where(
+            Submission.user_id == user.id,
+            Answer.is_correct.is_(True),
+        )
+        .group_by(Submission.id, Submission.subject)
+        .having(func.count(Answer.id) > 18)
+    ).all()
+    passed_article_id_set = {
+        "python" if subject == Subject.PYTHON_BASES.value else subject
+        for subject in passed_subjects
+        if subject in ARTICLE_IDS or subject == Subject.PYTHON_BASES.value
+    }
+    passed_article_ids = [
+        article_id for article_id in ARTICLE_IDS if article_id in passed_article_id_set
+    ]
     attempts = [
         {
             "id": submission.id,
@@ -3239,6 +3257,8 @@ def get_statistics(
         "completed_article_ids": completed_article_ids,
         "completed_material_count": len(completed_article_ids),
         "total_material_count": len(ARTICLE_IDS),
+        "passed_article_ids": passed_article_ids,
+        "passed_topic_count": len(passed_article_ids),
         "completed_test_count": len(submissions),
         "average_score_percent": round(sum(score_percentages) / len(score_percentages), 1)
         if score_percentages
