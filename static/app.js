@@ -586,6 +586,10 @@ function renderStatistics() {
   bindWorkspaceTabs();
 }
 
+function findTheoryArticle(subject) {
+  return THEORY_ARTICLES.find((article) => article.subject === subject || article.id === subject);
+}
+
 function renderAuth(mode = 'login', error = '') {
   const register = mode === 'register';
   app.innerHTML = `<p class="eyebrow">Python Test Lab / аккаунт</p>
@@ -745,6 +749,14 @@ async function submitTest(event, timedOut = false) {
     const correctPercent = result.correct_percent ?? (correctCount / questionCount * 100).toFixed(1);
     const incorrectPercent = result.incorrect_percent ?? (incorrectCount / questionCount * 100).toFixed(1);
     const scorePercent = result.score_percent ?? 0;
+    const passed = correctCount > 18;
+    const currentArticle = findTheoryArticle(selectedSubject);
+    const currentArticleIndex = currentArticle
+      ? THEORY_ARTICLES.findIndex((article) => article.id === currentArticle.id)
+      : -1;
+    const nextArticle = currentArticleIndex >= 0
+      ? THEORY_ARTICLES[currentArticleIndex + 1]
+      : null;
     document.querySelector('#test-form').insertAdjacentHTML('afterend', `<div class="result">
       <h2>Результат: <strong>${result.score} / ${result.max_score}</strong></h2>
       <p class="result-grade">Оценка: <strong>${result.grade} · ${escapeHtml(result.grade_label)}</strong>${result.written_pending ? ' (предварительная, без проверки письменного ответа)' : ''}</p>
@@ -755,7 +767,27 @@ async function submitTest(event, timedOut = false) {
         <div class="result-breakdown-row"><dt>Результат по баллам</dt><dd><strong>${result.score} из ${result.max_score}</strong><span>${scorePercent}%</span></dd></div>
       </dl>
       <div class="review"><h3>Ответы для самопроверки</h3>${review}</div>
+      <div class="result-actions">
+        <button class="submit-button" id="result-next-button" type="button">
+          ${passed ? 'Далее' : 'Повторить теорию'} <span class="button-arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
     </div>`);
+    document.querySelector('#result-next-button').addEventListener('click', () => {
+      if (passed && nextArticle) {
+        navigateApp(
+          { view: 'article', articleId: nextArticle.id },
+          () => renderTheoryArticle(nextArticle),
+        );
+      } else if (!passed && currentArticle) {
+        navigateApp(
+          { view: 'article', articleId: currentArticle.id },
+          () => renderTheoryArticle(currentArticle),
+        );
+      } else {
+        navigateApp({ view: 'theory' }, loadTheoryIndex);
+      }
+    });
     button.remove();
     window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   } catch (error) {

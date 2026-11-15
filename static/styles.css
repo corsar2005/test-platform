@@ -330,6 +330,8 @@ textarea:focus, .code-editor:focus { border-color: var(--accent); box-shadow: 0 
 .result-breakdown-row dd span { min-width: 4ch; color: var(--muted); font-size: var(--text-sm); text-align: right; }
 .result-breakdown-row.stats-correct dt { color: var(--accent); }
 .result-breakdown-row.stats-incorrect dt { color: var(--orange); }
+.result-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.result-actions .submit-button { margin-top: 0; }
 .stats-table { width: 100%; margin: 24px 0 30px; border-collapse: collapse; font-size: var(--text-sm); line-height: 1.55; }
 .stats-table th, .stats-table td { padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; }
 .stats-table th { color: var(--muted); font-size: var(--text-xs); letter-spacing: .07em; text-transform: uppercase; }
