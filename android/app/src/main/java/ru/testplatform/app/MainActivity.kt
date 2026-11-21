@@ -1,20 +1,26 @@
 package ru.testplatform.app
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import org.json.JSONObject
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
+    private var pendingReminder: ReminderSettings? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +46,15 @@ class MainActivity : Activity() {
         }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest): Boolean {
+                val uri = request.url
+                if (uri.scheme != REMINDER_SCHEME) return false
+                if (!request.isForMainFrame || uri.host != REMINDER_HOST) return true
+                handleReminderRequest(uri)
+                return true
+            }
+        }
         webView.webChromeClient = object : WebChromeClient() {
             override fun onShowFileChooser(
                 webView: WebView,
@@ -58,6 +72,90 @@ class MainActivity : Activity() {
                 startActivityForResult(intent, REQUEST_FILE)
                 return true
             }
+        }
+    }
+
+    private fun handleReminderRequest(uri: Uri) {
+        val enabled = when (uri.getQueryParameter("enabled")) {
+            "true" -> true
+            "false" -> false
+            else -> null
+        }
+        val hour = uri.getQueryParameter("hour")?.toIntOrNull()
+        val minute = uri.getQueryParameter("minute")?.toIntOrNull()
+        if (enabled == null || hour == null || hour !in 0..23 || minute == null || minute !in 0..59) {
+            notifyReminderResult(
+                false,
+                ReminderSettings(false, 19, 0),
+                "Не удалось сохранить время напоминания.",
+            )
+            return
+        }
+
+        val settings = ReminderSettings(enabled, hour, minute)
+        if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            pendingReminder = settings
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
+            return
+        }
+        saveReminder(settings)
+        notifyReminderResult(true, settings, if (enabled) "Напоминание включено." else "Напоминания отключены.")
+    }
+
+    private fun saveReminder(settings: ReminderSettings) {
+        getSharedPreferences(DailyReminderScheduler.PREFERENCES, MODE_PRIVATE).edit()
+            .putBoolean(DailyReminderScheduler.KEY_ENABLED, settings.enabled)
+            .putInt(DailyReminderScheduler.KEY_HOUR, settings.hour)
+            .putInt(DailyReminderScheduler.KEY_MINUTE, settings.minute)
+            .apply()
+        if (settings.enabled) {
+            DailyReminderScheduler.schedule(this, settings.hour, settings.minute)
+        } else {
+            DailyReminderScheduler.cancel(this)
+        }
+    }
+
+    private fun notifyReminderResult(
+        success: Boolean,
+        settings: ReminderSettings,
+        message: String,
+    ) {
+        val detail = JSONObject()
+            .put("success", success)
+            .put("enabled", settings.enabled)
+            .put("hour", settings.hour)
+            .put("minute", settings.minute)
+            .put("message", message)
+            .toString()
+        webView.post {
+            webView.evaluateJavascript(
+                "window.dispatchEvent(new CustomEvent('android-reminder-result',{detail:$detail}));",
+                null,
+            )
+        }
+    }
+
+    @Deprecated("Required to handle the Android 13 notification permission result")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != REQUEST_NOTIFICATIONS) return
+        val settings = pendingReminder ?: return
+        pendingReminder = null
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            saveReminder(settings)
+            notifyReminderResult(true, settings, "Напоминание включено.")
+        } else {
+            notifyReminderResult(
+                false,
+                settings,
+                "Разрешите уведомления в настройках Android, чтобы включить напоминания.",
+            )
         }
     }
 
@@ -98,5 +196,10 @@ class MainActivity : Activity() {
 
     private companion object {
         const val REQUEST_FILE = 1001
+        const val REQUEST_NOTIFICATIONS = 1002
+        const val REMINDER_SCHEME = "python-test-lab"
+        const val REMINDER_HOST = "reminder"
     }
+
+    private data class ReminderSettings(val enabled: Boolean, val hour: Int, val minute: Int)
 }

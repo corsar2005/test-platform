@@ -5,12 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f6f8f6">
   <title>Python Test Lab</title>
-  <link rel="stylesheet" href="/static/styles.css?v=20261121-sounds">
+  <link rel="stylesheet" href="/static/styles.css?v=20261121-reminders">
 </head>
 <body>
   <div class="theme-toggle-wrap">
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Переключить тему">Тема</button>
     <button type="button" class="sound-toggle" id="sound-toggle" aria-label="Выключить звуковые эффекты" aria-pressed="true">🔊 Звук</button>
+    <button type="button" class="reminder-toggle" id="reminder-toggle" aria-label="Настроить ежедневное напоминание" hidden>🔔</button>
+  </div>
+  <dialog class="reminder-dialog" id="reminder-dialog" aria-labelledby="reminder-title" aria-describedby="reminder-help">
+    <form class="reminder-form">
+      <h2 id="reminder-title">Ежедневное напоминание</h2>
+      <label class="reminder-enabled">
+        <input type="checkbox" id="reminder-enabled">
+        Напоминать каждый день
+      </label>
+      <label class="reminder-time-label" for="reminder-time">
+        Время уведомления
+        <input type="time" id="reminder-time" value="19:00">
+      </label>
+      <p class="reminder-help" id="reminder-help">Напоминание приходит, даже если приложение закрыто. Время может немного смещаться из-за энергосбережения.</p>
+      <p class="reminder-status" id="reminder-status" aria-live="polite"></p>
+      <div class="reminder-actions">
+        <button type="button" class="tool-button" id="close-reminder">Закрыть</button>
+        <button type="button" class="submit-button" id="save-reminder">Сохранить</button>
+      </div>
+    </form>
   </div>
   <main id="app" class="shell">
     <p class="loading">Загрузка теста...</p>
@@ -20,6 +40,6 @@
   </script>
   <script src="/static/theory.js?v=20261018-databases"></script>
   <script src="/static/offline.js?v=20261115-topic-gating"></script>
-  <script src="/static/app.js?v=20261121-sounds"></script>
+  <script src="/static/app.js?v=20261121-reminders"></script>
 </body>
 </html>

@@ -12,6 +12,11 @@ const THEME_STORAGE_KEY = 'python-test-lab-theme';
 const SOUND_STORAGE_KEY = 'python-test-lab-sounds';
 let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
 let soundContext;
+const REMINDER_ENABLED_STORAGE_KEY = 'python-test-lab-reminder-enabled';
+const REMINDER_TIME_STORAGE_KEY = 'python-test-lab-reminder-time';
+const IS_ANDROID_APP = location.protocol === 'file:';
+let reminderEnabled = localStorage.getItem(REMINDER_ENABLED_STORAGE_KEY) === 'true';
+let reminderTime = localStorage.getItem(REMINDER_TIME_STORAGE_KEY) || '19:00';
 
 const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
 
@@ -113,6 +118,68 @@ function playUiSound(type) {
   });
 }
 
+function updateReminderButton() {
+  const button = document.querySelector('#reminder-toggle');
+  if (!button) return;
+  button.textContent = reminderEnabled ? '🔔' : '🔕';
+  button.setAttribute(
+    'aria-label',
+    reminderEnabled ? `Напоминание включено на ${reminderTime}. Настроить` : 'Настроить ежедневное напоминание',
+  );
+}
+
+function bindReminderControls() {
+  const button = document.querySelector('#reminder-toggle');
+  const dialog = document.querySelector('#reminder-dialog');
+  if (!button || !dialog) return;
+  if (!IS_ANDROID_APP) {
+    button.hidden = true;
+    return;
+  }
+
+  button.hidden = false;
+  const enabledInput = document.querySelector('#reminder-enabled');
+  const timeInput = document.querySelector('#reminder-time');
+  const status = document.querySelector('#reminder-status');
+  updateReminderButton();
+  button.addEventListener('click', () => {
+    enabledInput.checked = reminderEnabled;
+    timeInput.value = reminderTime;
+    status.textContent = reminderEnabled
+      ? `Напоминание включено на ${reminderTime}.`
+      : 'Напоминания выключены.';
+    dialog.showModal();
+  });
+  document.querySelector('#close-reminder').addEventListener('click', () => dialog.close());
+  document.querySelector('#save-reminder').addEventListener('click', () => {
+    if (!timeInput.reportValidity()) return;
+    const [hour, minute] = timeInput.value.split(':').map(Number);
+    const parameters = new URLSearchParams({
+      enabled: String(enabledInput.checked),
+      hour: String(hour),
+      minute: String(minute),
+    });
+    status.textContent = 'Сохраняем настройки напоминания...';
+    location.href = `python-test-lab://reminder?${parameters}`;
+  });
+  window.addEventListener('android-reminder-result', (event) => {
+    const result = event.detail;
+    if (!result.success) {
+      enabledInput.checked = reminderEnabled;
+      timeInput.value = reminderTime;
+      status.textContent = result.message || 'Не удалось сохранить напоминание.';
+      return;
+    }
+    reminderEnabled = result.enabled;
+    reminderTime = `${String(result.hour).padStart(2, '0')}:${String(result.minute).padStart(2, '0')}`;
+    localStorage.setItem(REMINDER_ENABLED_STORAGE_KEY, String(reminderEnabled));
+    localStorage.setItem(REMINDER_TIME_STORAGE_KEY, reminderTime);
+    updateReminderButton();
+    status.textContent = result.message;
+    dialog.close();
+  });
+}
+
 function setAppRoute(route, replace = false) {
   const currentRoute = window.history.state?.appRoute;
   if (!replace && JSON.stringify(currentRoute) === JSON.stringify(route)) return;
@@ -161,6 +228,7 @@ applyTheme();
 bindThemeToggle();
 updateSoundToggle();
 bindSoundToggle();
+bindReminderControls();
 
 function skeletonBlock(className = '') {
   return `<span class="skeleton-block ${className}" aria-hidden="true"></span>`;
