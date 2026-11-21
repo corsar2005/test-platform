@@ -6,7 +6,10 @@ plugins {
 val generatedOfflineAssets = layout.buildDirectory.dir("generated/offlineAssets")
 val prepareOfflineAssets = tasks.register<Sync>("prepareOfflineAssets") {
     from("../../static") {
-        exclude("offline-question-bank.js")
+        exclude("offline-question-bank.js", "index.html")
+    }
+    from("../../static/index.html") {
+        filter { line: String -> line.replace("\"/static/", "\"") }
     }
     from("../../static/offline-question-bank.js") {
         rename { "offline-question-bank-runtime.js" }
