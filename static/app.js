@@ -9,6 +9,9 @@ let timerInterval;
 let timerDeadline;
 const TEST_DURATION_SECONDS = 20 * 60;
 const THEME_STORAGE_KEY = 'python-test-lab-theme';
+const SOUND_STORAGE_KEY = 'python-test-lab-sounds';
+let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
+let soundContext;
 
 const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
 
@@ -42,6 +45,72 @@ function bindThemeToggle() {
     const currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
     applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
   };
+}
+
+function updateSoundToggle() {
+  const toggle = document.querySelector('#sound-toggle');
+  if (!toggle) return;
+  if (!window.AudioContext) {
+    toggle.disabled = true;
+    toggle.textContent = 'Звук недоступен';
+    toggle.setAttribute('aria-label', 'Звуковые эффекты не поддерживаются браузером');
+    toggle.setAttribute('aria-pressed', 'false');
+    return;
+  }
+  toggle.textContent = soundEnabled ? '🔊 Звук' : '🔇 Без звука';
+  toggle.setAttribute('aria-label', soundEnabled ? 'Выключить звуковые эффекты' : 'Включить звуковые эффекты');
+  toggle.setAttribute('aria-pressed', String(soundEnabled));
+}
+
+function setSoundEnabled(enabled) {
+  soundEnabled = enabled;
+  localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? 'on' : 'off');
+  updateSoundToggle();
+}
+
+function bindSoundToggle() {
+  const toggle = document.querySelector('#sound-toggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', () => {
+    setSoundEnabled(!soundEnabled);
+    if (soundEnabled) playUiSound('answer');
+  });
+}
+
+function getSoundContext() {
+  if (!soundEnabled || !window.AudioContext) return null;
+  if (!soundContext) soundContext = new window.AudioContext();
+  if (soundContext.state === 'suspended') {
+    soundContext.resume().catch((error) => console.error('Не удалось запустить звуковые эффекты.', error));
+  }
+  return soundContext;
+}
+
+function playUiSound(type) {
+  const context = getSoundContext();
+  if (!context) return;
+  const notes = type === 'success'
+    ? [523.25, 659.25, 783.99]
+    : type === 'result'
+      ? [392]
+      : [587.33];
+  const start = context.currentTime;
+  const duration = type === 'answer' ? 0.055 : 0.09;
+  notes.forEach((frequency, index) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const noteStart = start + index * 0.075;
+    const noteEnd = noteStart + duration;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(frequency, noteStart);
+    gain.gain.setValueAtTime(0.0001, noteStart);
+    gain.gain.exponentialRampToValueAtTime(0.025, noteStart + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(noteStart);
+    oscillator.stop(noteEnd);
+  });
 }
 
 function setAppRoute(route, replace = false) {
@@ -90,6 +159,8 @@ window.addEventListener('popstate', (event) => {
 
 applyTheme();
 bindThemeToggle();
+updateSoundToggle();
+bindSoundToggle();
 
 function skeletonBlock(className = '') {
   return `<span class="skeleton-block ${className}" aria-hidden="true"></span>`;
@@ -199,7 +270,10 @@ function renderTest() {
     );
   });
   document.querySelectorAll('.question').forEach((section) => {
-    section.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((input) => input.addEventListener('change', () => collectAnswer(section)));
+    section.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach((input) => input.addEventListener('change', () => {
+      playUiSound('answer');
+      collectAnswer(section);
+    }));
     section.querySelector('.written-answer')?.addEventListener('input', () => collectAnswer(section));
     section.querySelector('.code-editor')?.addEventListener('input', () => collectAnswer(section));
     section.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => {
@@ -789,6 +863,7 @@ async function submitTest(event, timedOut = false) {
   event.preventDefault();
   const button = event.currentTarget.querySelector('.submit-button');
   if (!button || button.disabled) return;
+  getSoundContext();
   clearInterval(timerInterval);
   document.querySelectorAll('.question').forEach(collectAnswer);
   button.disabled = true;
@@ -811,6 +886,7 @@ async function submitTest(event, timedOut = false) {
     const correctPercent = result.correct_percent ?? (correctCount / questionCount * 100).toFixed(1);
     const incorrectPercent = result.incorrect_percent ?? (incorrectCount / questionCount * 100).toFixed(1);
     const scorePercent = result.score_percent ?? 0;
+    playUiSound(result.grade >= 4 ? 'success' : 'result');
     const passed = correctCount > 18;
     const currentArticle = findTheoryArticle(selectedSubject);
     const currentArticleIndex = currentArticle
