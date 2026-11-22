@@ -7,7 +7,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.ValueCallback
@@ -48,13 +47,6 @@ class MainActivity : Activity() {
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                webView.evaluateJavascript(
-                    "JSON.stringify({url:location.href,ready:document.readyState,offline:window.OFFLINE_MODE,viewport:[innerWidth,innerHeight],body:[document.body.clientWidth,document.body.clientHeight],app:(()=>{const e=document.querySelector('#app');const r=e.getBoundingClientRect();return {size:[r.width,r.height],text:e.innerText.slice(0,200)}})()})",
-                ) { result -> Log.d("PythonTestLabWeb", "Page state: $result") }
-            }
-
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 if (uri.scheme != REMINDER_SCHEME) return false
@@ -64,14 +56,6 @@ class MainActivity : Activity() {
             }
         }
         webView.webChromeClient = object : WebChromeClient() {
-            override fun onConsoleMessage(message: android.webkit.ConsoleMessage): Boolean {
-                Log.e(
-                    "PythonTestLabWeb",
-                    "${message.message()} (${message.sourceId()}:${message.lineNumber()})",
-                )
-                return true
-            }
-
             override fun onShowFileChooser(
                 webView: WebView,
                 filePathCallback: ValueCallback<Array<Uri>>,
