@@ -7,30 +7,45 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.ViewGroup
 import android.webkit.CookieManager
+import android.webkit.JavascriptInterface
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewAssetLoader
+import org.json.JSONException
 import org.json.JSONObject
+import org.json.JSONTokener
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var fileChooserCallback: ValueCallback<Array<Uri>>? = null
     private var pendingReminder: ReminderSettings? = null
+    private val webStoragePreferences by lazy {
+        getSharedPreferences(WEB_STORAGE_PREFERENCES, MODE_PRIVATE)
+    }
+    private val assetLoader by lazy {
+        WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         webView = WebView(this)
         setContentView(webView)
         configureWebView()
-        if (savedInstanceState == null) {
-            webView.loadUrl("file:///android_asset/index.html")
-        } else {
+        val migrationComplete = webStoragePreferences.getBoolean(KEY_MIGRATION_COMPLETE, false)
+        if (savedInstanceState != null && migrationComplete) {
             webView.restoreState(savedInstanceState)
+        } else {
+            webView.loadUrl(if (migrationComplete) APP_ASSET_URL else LEGACY_ASSET_URL)
         }
     }
 
@@ -44,15 +59,32 @@ class MainActivity : Activity() {
             cacheMode = WebSettings.LOAD_NO_CACHE
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
         }
+        webView.addJavascriptInterface(LegacyStorageBridge(), "AndroidStorageBridge")
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(
+                view: WebView?,
+                request: WebResourceRequest,
+            ): WebResourceResponse? {
+                return assetLoader.shouldInterceptRequest(request.url)
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest): Boolean {
                 val uri = request.url
                 if (uri.scheme != REMINDER_SCHEME) return false
                 if (!request.isForMainFrame || uri.host != REMINDER_HOST) return true
                 handleReminderRequest(uri)
                 return true
+            }
+
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                if (url == LEGACY_ASSET_URL
+                    && !webStoragePreferences.getBoolean(KEY_MIGRATION_COMPLETE, false)
+                ) {
+                    migrateLegacyWebStorage()
+                }
             }
         }
         webView.webChromeClient = object : WebChromeClient() {
@@ -72,6 +104,39 @@ class MainActivity : Activity() {
                 startActivityForResult(intent, REQUEST_FILE)
                 return true
             }
+        }
+    }
+
+    private fun migrateLegacyWebStorage() {
+        webView.evaluateJavascript(LEGACY_STORAGE_EXPORT_SCRIPT) { encodedStorage ->
+            val storage = try {
+                JSONTokener(encodedStorage).nextValue() as? String
+            } catch (error: JSONException) {
+                Log.e(TAG, "Could not read the previous local profile.", error)
+                null
+            }
+            if (storage == null) {
+                Log.e(TAG, "Could not migrate the previous local profile.")
+                webView.evaluateJavascript(
+                    "document.querySelector('#app').innerHTML = '<p class=\"error\">Не удалось перенести локальные данные. Закройте приложение и запустите его снова.</p>';",
+                    null,
+                )
+                return@evaluateJavascript
+            }
+            webStoragePreferences.edit()
+                .putString(KEY_LEGACY_STORAGE, storage)
+                .putBoolean(KEY_MIGRATION_COMPLETE, true)
+                .apply()
+            webView.loadUrl(APP_ASSET_URL)
+        }
+    }
+
+    private inner class LegacyStorageBridge {
+        @JavascriptInterface
+        fun takeLegacyStorage(): String {
+            val storage = webStoragePreferences.getString(KEY_LEGACY_STORAGE, "{}") ?: "{}"
+            webStoragePreferences.edit().remove(KEY_LEGACY_STORAGE).apply()
+            return storage
         }
     }
 
@@ -195,6 +260,14 @@ class MainActivity : Activity() {
     }
 
     private companion object {
+        const val APP_ASSET_URL = "https://appassets.androidplatform.net/assets/index.html"
+        const val LEGACY_ASSET_URL = "file:///android_asset/index.html"
+        const val LEGACY_STORAGE_EXPORT_SCRIPT =
+            "(function(){return JSON.stringify(Object.fromEntries(Array.from({length:localStorage.length},(_,i)=>localStorage.key(i)).filter(key=>key&&key.startsWith('python-test-lab-')).map(key=>[key,localStorage.getItem(key)])));})()"
+        const val WEB_STORAGE_PREFERENCES = "python_test_lab_web_storage"
+        const val KEY_LEGACY_STORAGE = "legacy_local_storage"
+        const val KEY_MIGRATION_COMPLETE = "legacy_storage_migration_complete"
+        const val TAG = "PythonTestLab"
         const val REQUEST_FILE = 1001
         const val REQUEST_NOTIFICATIONS = 1002
         const val REMINDER_SCHEME = "python-test-lab"

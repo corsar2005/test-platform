@@ -15,7 +15,7 @@ let soundContext;
 const REMINDER_ENABLED_STORAGE_KEY = 'python-test-lab-reminder-enabled';
 const REMINDER_TIME_STORAGE_KEY = 'python-test-lab-reminder-time';
 const COMPILER_CODE_STORAGE_KEY = 'python-test-lab-compiler-code';
-const IS_ANDROID_APP = location.protocol === 'file:';
+const IS_ANDROID_APP = Boolean(window.OFFLINE_MODE) || location.protocol === 'file:';
 let reminderEnabled = localStorage.getItem(REMINDER_ENABLED_STORAGE_KEY) === 'true';
 let reminderTime = localStorage.getItem(REMINDER_TIME_STORAGE_KEY) || '19:00';
 let compilerWorker;
@@ -730,6 +730,7 @@ function renderHelp() {
         <li>Войдите в аккаунт или зарегистрируйтесь. Попытки тестов и изученные материалы сохраняются в аккаунте.</li>
         <li>Во вкладке «Тесты» выберите тему и уровень, затем отметьте ответы или заполните письменное задание.</li>
         <li>Для письменного задания можно переключаться между текстом и редактором Python, а также загрузить файл <code>.py</code>.</li>
+        <li>Во вкладке «Код» можно запускать свои программы Python; черновик редактора сохраняется в браузере.</li>
         <li>Нажмите «Проверить тест», чтобы увидеть результат, разбор ответов и оценку.</li>
         <li>Во вкладке «Теория» изучайте материалы по порядку. Следующие темы открываются после прохождения предыдущих тестов; результаты доступны в «Статистике».</li>
       </ol>
@@ -740,6 +741,7 @@ function renderHelp() {
         <li>Внизу экрана находятся разделы «Тесты», «Теория», «Статистика» и «Справка».</li>
         <li>Тесты, материалы и проверка ответов работают без интернета. Прогресс хранится локально на устройстве.</li>
         <li>Письменное решение можно набрать в приложении или выбрать файл <code>.py</code> на устройстве.</li>
+        <li>Во вкладке «Код» можно редактировать и запускать Python-программы; черновик остаётся на устройстве.</li>
         <li>Нажмите значок колокольчика, чтобы включить ежедневное напоминание и выбрать время. Разрешите уведомления в системном запросе Android.</li>
         <li>Мобильные результаты хранятся отдельно от веб-аккаунта и не синхронизируются между устройствами.</li>
       </ol>

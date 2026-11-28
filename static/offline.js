@@ -1,5 +1,5 @@
 (() => {
-  if (location.protocol !== 'file:') return;
+  if (!window.OFFLINE_MODE && location.protocol !== 'file:') return;
 
   window.OFFLINE_MODE = true;
   const STORAGE_KEY = 'python-test-lab-offline-data';
