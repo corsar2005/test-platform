@@ -14,3 +14,4 @@ android/.gradle/
 android/local.properties
 android/.idea/
 android/**/build/
+node_modules/

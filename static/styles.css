@@ -235,6 +235,16 @@ h2, h3 { letter-spacing: -.035em; }
 .view-tab { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 18px; border: 0; border-bottom: 2px solid transparent; border-radius: 12px 12px 0 0; color: var(--muted); background: transparent; cursor: pointer; font-size: var(--text-sm); font-weight: 700; transition: color .2s ease, background .2s ease, border-color .2s ease; }
 .view-tab:hover, .view-tab.is-active { border-bottom-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 64%, transparent); }
 .view-tab-icon { width: 18px; height: 18px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.7; }
+.compiler-panel { margin: 24px 0; padding: 22px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); box-shadow: 0 8px 26px var(--shadow); }
+.compiler-toolbar, .compiler-actions, .compiler-output-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.compiler-toolbar > label, .compiler-output-heading > strong { font-size: var(--text-sm); font-weight: 700; }
+.compiler-actions { justify-content: flex-end; }
+.compiler-actions .submit-button { margin: 0; }
+.compiler-editor { min-height: 300px; margin-top: 14px; padding: 18px; color: var(--ink); background: var(--code); font-size: var(--text-sm); line-height: 1.6; tab-size: 4; }
+.compiler-output-panel { margin-top: 20px; }
+.compiler-output-heading { margin-bottom: 10px; }
+.compiler-output { min-height: 72px; max-height: 320px; overflow: auto; margin: 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--code); font: var(--text-sm)/1.6 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.compiler-note { margin: 14px 0 0; color: var(--muted); font-size: var(--text-xs); }
 .help-section { margin: 24px 0; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); box-shadow: 0 8px 26px var(--shadow); }
 .help-section h2 { margin: 0 0 14px; font-size: 1.5rem; font-weight: 500; line-height: 1.3; }
 .help-section ol, .help-section ul { margin: 0; padding-left: 24px; }
@@ -428,7 +438,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .code-editor:
     left: 0;
     z-index: 20;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 6px;
     margin: 0;
     padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px);
@@ -462,6 +472,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, .code-editor:
     width: 21px;
     height: 21px;
   }
+  .compiler-panel { margin: 18px 0; padding: 16px; border-radius: 18px; }
+  .compiler-toolbar { align-items: flex-start; flex-direction: column; }
+  .compiler-actions { width: 100%; }
+  .compiler-actions > button { flex: 1; }
+  .compiler-editor { min-height: 260px; margin-top: 12px; padding: 14px; font-size: 16px; }
+  .compiler-output { max-height: 240px; padding: 14px; }
   .test-progress { align-items: stretch; flex-direction: column; gap: 10px; margin: 0 0 20px; padding: 14px 16px; }
   .test-progress > div { min-width: 0; }
   .meta { gap: 8px; margin-bottom: 24px; font-size: 11px; }

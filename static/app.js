@@ -14,9 +14,12 @@ let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== 'off';
 let soundContext;
 const REMINDER_ENABLED_STORAGE_KEY = 'python-test-lab-reminder-enabled';
 const REMINDER_TIME_STORAGE_KEY = 'python-test-lab-reminder-time';
+const COMPILER_CODE_STORAGE_KEY = 'python-test-lab-compiler-code';
 const IS_ANDROID_APP = location.protocol === 'file:';
 let reminderEnabled = localStorage.getItem(REMINDER_ENABLED_STORAGE_KEY) === 'true';
 let reminderTime = localStorage.getItem(REMINDER_TIME_STORAGE_KEY) || '19:00';
+let compilerWorker;
+let compilerTimeout;
 
 const escapeHtml = (value = '') => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[char]);
 
@@ -188,13 +191,17 @@ function setAppRoute(route, replace = false) {
 }
 
 function navigateApp(route, render, replace = false) {
+  if (route.view !== 'compiler') stopPythonCompiler();
   setAppRoute(route, replace);
   render();
 }
 
 async function restoreAppRoute(route) {
+  if (route.view !== 'compiler') stopPythonCompiler();
   if (route.view === 'help') {
     renderHelp();
+  } else if (route.view === 'compiler') {
+    renderCompiler();
   } else if (route.view === 'theory') {
     loadTheoryIndex();
   } else if (route.view === 'article') {
@@ -571,7 +578,141 @@ function renderWorkspaceTabs(activeView) {
       <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.4-1.8 3M12 17h.01"/></svg>
       <span>Справка</span>
     </button>
+    <button class="view-tab ${activeView === 'compiler' ? 'is-active' : ''}" data-view="compiler" aria-label="Компилятор Python" aria-pressed="${activeView === 'compiler'}">
+      <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m8 8-4 4 4 4m8-8 4 4-4 4M14 5l-4 14"/></svg>
+      <span>Код</span>
+    </button>
   </nav>`;
+}
+
+const COMPILER_STARTER_CODE = `name = "мир"
+print("Привет,", name)
+
+for number in range(1, 4):
+    print(number, "в квадрате =", number ** 2)`;
+
+function renderCompiler() {
+  stopPythonCompiler();
+  app.innerHTML = `<p class="eyebrow">Python Test Lab / практика</p>
+    ${currentUser ? `${renderAccountBar(currentUser.username)}${renderWorkspaceTabs('compiler')}` : '<button class="article-back" id="compiler-back"><span class="button-arrow" aria-hidden="true">←</span> Ко входу</button>'}
+    <h1>Python-компилятор</h1>
+    <p class="lead">Пишите и запускайте Python прямо в приложении. Код выполняется на устройстве, без отправки на сервер.</p>
+    <section class="compiler-panel" aria-label="Редактор Python">
+      <div class="compiler-toolbar">
+        <label for="compiler-editor">Редактор кода</label>
+        <div class="compiler-actions">
+          <button type="button" class="tool-button" id="compiler-example">Пример</button>
+          <button type="button" class="submit-button" id="compiler-run">▶ Запустить</button>
+        </div>
+      </div>
+      <textarea class="compiler-editor" id="compiler-editor" aria-label="Исходный код на Python" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" wrap="off"></textarea>
+      <div class="compiler-output-panel">
+        <div class="compiler-output-heading">
+          <strong>Консоль</strong>
+          <button type="button" class="tool-button" id="compiler-clear">Очистить</button>
+        </div>
+        <pre class="compiler-output" id="compiler-output" role="status" aria-live="polite">Здесь появится результат выполнения.</pre>
+      </div>
+      <p class="compiler-note">Ограничение запуска — 2,5 секунды. Поддерживаются основные возможности Python; некоторые стандартные модули CPython могут отсутствовать.</p>
+    </section>`;
+
+  const editor = document.querySelector('#compiler-editor');
+  const output = document.querySelector('#compiler-output');
+  const savedCode = localStorage.getItem(COMPILER_CODE_STORAGE_KEY);
+  editor.value = savedCode === null ? COMPILER_STARTER_CODE : savedCode;
+  editor.addEventListener('input', () => {
+    localStorage.setItem(COMPILER_CODE_STORAGE_KEY, editor.value);
+  });
+  editor.addEventListener('keydown', (event) => {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      editor.setRangeText('    ', start, end, 'end');
+      editor.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      runPythonCode();
+    }
+  });
+  document.querySelector('#compiler-example').addEventListener('click', () => {
+    editor.value = COMPILER_STARTER_CODE;
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    output.textContent = 'Пример загружен. Нажмите «Запустить».';
+  });
+  document.querySelector('#compiler-clear').addEventListener('click', () => {
+    output.textContent = '';
+  });
+  document.querySelector('#compiler-run').addEventListener('click', runPythonCode);
+  const backButton = document.querySelector('#compiler-back');
+  if (backButton) {
+    backButton.addEventListener('click', () => {
+      navigateApp({ view: 'auth', mode: 'login' }, () => renderAuth());
+    });
+  }
+}
+
+function stopPythonCompiler() {
+  if (compilerTimeout) {
+    clearTimeout(compilerTimeout);
+    compilerTimeout = null;
+  }
+  if (compilerWorker) {
+    compilerWorker.terminate();
+    compilerWorker = null;
+  }
+}
+
+function runPythonCode() {
+  const editor = document.querySelector('#compiler-editor');
+  const output = document.querySelector('#compiler-output');
+  const runButton = document.querySelector('#compiler-run');
+  if (!editor || !output || !runButton) return;
+  if (!editor.value.trim()) {
+    output.textContent = 'Введите код Python перед запуском.';
+    editor.focus();
+    return;
+  }
+  if (editor.value.length > 10_000) {
+    output.textContent = 'Код слишком длинный. Максимальный размер — 10 000 символов.';
+    return;
+  }
+
+  stopPythonCompiler();
+  const workerUrl = IS_ANDROID_APP
+    ? new URL('python-runner-worker.js', location.href)
+    : new URL('/static/python-runner-worker.js', location.origin);
+  try {
+    compilerWorker = new Worker(workerUrl);
+  } catch (error) {
+    output.textContent = `Не удалось запустить интерпретатор: ${error.message}`;
+    return;
+  }
+
+  const worker = compilerWorker;
+  runButton.disabled = true;
+  output.textContent = 'Выполняется...';
+  worker.addEventListener('message', (event) => {
+    if (compilerWorker !== worker) return;
+    output.textContent = event.data.error
+      ? `${event.data.output}${event.data.output ? '\n' : ''}${event.data.error}`
+      : event.data.output || 'Код выполнен без вывода.';
+    stopPythonCompiler();
+    runButton.disabled = false;
+  });
+  worker.addEventListener('error', (event) => {
+    if (compilerWorker !== worker) return;
+    output.textContent = `Ошибка интерпретатора: ${event.message || 'неизвестная ошибка'}`;
+    stopPythonCompiler();
+    runButton.disabled = false;
+  });
+  compilerTimeout = setTimeout(() => {
+    if (compilerWorker !== worker) return;
+    stopPythonCompiler();
+    output.textContent = 'Превышено время запуска (2,5 секунды). Проверьте код и попробуйте снова.';
+    runButton.disabled = false;
+  }, 3000);
+  worker.postMessage({ code: editor.value });
 }
 
 function renderHelp() {
@@ -608,6 +749,7 @@ function renderHelp() {
       <ul>
         <li>Кнопка «Тема» переключает светлый и тёмный режим; выбор запоминается.</li>
         <li>Кнопка «Звук» включает или выключает звуковые эффекты.</li>
+        <li>В разделе «Код» можно набрать программу Python и запустить её локально.</li>
         ${isOffline ? '<li>Напоминания — только локальные уведомления Android; в веб-браузере эта настройка недоступна.</li>' : '<li>В браузере доступны тема и звук; мобильные напоминания настраиваются только в Android-приложении.</li>'}
       </ul>
     </section>
@@ -631,6 +773,8 @@ function bindWorkspaceTabs() {
         navigateApp({ view: 'statistics' }, loadStatistics);
       } else if (button.dataset.view === 'help') {
         navigateApp({ view: 'help' }, renderHelp);
+      } else if (button.dataset.view === 'compiler') {
+        navigateApp({ view: 'compiler' }, renderCompiler);
       } else {
         navigateApp({ view: 'tests', subject: 'python' }, () => loadDifficulties('python'));
       }
@@ -847,13 +991,17 @@ function renderAuth(mode = 'login', error = '') {
       <button class="submit-button" type="submit">${register ? 'Зарегистрироваться' : 'Войти'}</button>
     </form>
     <button class="auth-switch" id="auth-switch">${register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>
-    <button class="auth-switch" id="open-help">Справка: как пользоваться</button>`;
+    <button class="auth-switch" id="open-help">Справка: как пользоваться</button>
+    <button class="auth-switch" id="open-compiler">Открыть Python-компилятор</button>`;
   document.querySelector('#auth-switch').addEventListener('click', () => {
     const mode = register ? 'login' : 'register';
     navigateApp({ view: 'auth', mode }, () => renderAuth(mode));
   });
   document.querySelector('#open-help').addEventListener('click', () => {
     navigateApp({ view: 'help' }, renderHelp);
+  });
+  document.querySelector('#open-compiler').addEventListener('click', () => {
+    navigateApp({ view: 'compiler' }, renderCompiler);
   });
   bindThemeToggle();
   document.querySelector('#auth-form').addEventListener('submit', async (event) => {

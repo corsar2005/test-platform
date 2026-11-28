@@ -1,0 +1,7 @@
+{
+  "name": "python-test-lab-browser-runtime",
+  "private": true,
+  "devDependencies": {
+    "skulpt": "1.2.0"
+  }
+}
