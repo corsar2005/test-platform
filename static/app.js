@@ -193,7 +193,9 @@ function navigateApp(route, render, replace = false) {
 }
 
 async function restoreAppRoute(route) {
-  if (route.view === 'theory') {
+  if (route.view === 'help') {
+    renderHelp();
+  } else if (route.view === 'theory') {
     loadTheoryIndex();
   } else if (route.view === 'article') {
     renderLoadingSkeleton('theory');
@@ -565,7 +567,58 @@ function renderWorkspaceTabs(activeView) {
       <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h17M8 15v-4M13 15V7M18 15V3"/></svg>
       <span>Статистика</span>
     </button>
+    <button class="view-tab ${activeView === 'help' ? 'is-active' : ''}" data-view="help" aria-pressed="${activeView === 'help'}">
+      <svg class="view-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9a2.5 2.5 0 1 1 4.2 1.8c-1.1 1-1.8 1.4-1.8 3M12 17h.01"/></svg>
+      <span>Справка</span>
+    </button>
   </nav>`;
+}
+
+function renderHelp() {
+  const isOffline = Boolean(window.OFFLINE_MODE);
+  const onlineMode = isOffline
+    ? 'Android-приложение хранит профиль, результаты тестов и прогресс на этом устройстве. Для работы не нужен интернет; данные веб-аккаунта с ним не синхронизируются.'
+    : 'Веб-версия работает в браузере на компьютере или телефоне. Войдите в аккаунт, чтобы сохранять результаты и прогресс; для работы нужен доступ к серверу.';
+  app.innerHTML = `<p class="eyebrow">Python Test Lab / справка</p>
+    ${currentUser ? `${renderAccountBar(currentUser.username)}${renderWorkspaceTabs('help')}` : '<button class="article-back" id="help-back"><span class="button-arrow" aria-hidden="true">←</span> Ко входу</button>'}
+    <h1>Как пользоваться приложением</h1>
+    <p class="lead">Краткие инструкции для веб-версии и мобильного приложения.</p>
+    <section class="help-section">
+      <h2>Веб-версия</h2>
+      <ol>
+        <li>Войдите в аккаунт или зарегистрируйтесь. Попытки тестов и изученные материалы сохраняются в аккаунте.</li>
+        <li>Во вкладке «Тесты» выберите тему и уровень, затем отметьте ответы или заполните письменное задание.</li>
+        <li>Для письменного задания можно переключаться между текстом и редактором Python, а также загрузить файл <code>.py</code>.</li>
+        <li>Нажмите «Проверить тест», чтобы увидеть результат, разбор ответов и оценку.</li>
+        <li>Во вкладке «Теория» изучайте материалы по порядку. Следующие темы открываются после прохождения предыдущих тестов; результаты доступны в «Статистике».</li>
+      </ol>
+    </section>
+    <section class="help-section">
+      <h2>Мобильное приложение</h2>
+      <ol>
+        <li>Навигация «Тесты», «Теория» и «Статистика» расположена внизу экрана.</li>
+        <li>Тесты, материалы и проверка ответов работают без интернета. Прогресс хранится локально на устройстве.</li>
+        <li>Письменное решение можно набрать в приложении или выбрать файл <code>.py</code> на устройстве.</li>
+        <li>Нажмите значок колокольчика, чтобы включить ежедневное напоминание и выбрать время. Разрешите уведомления в системном запросе Android.</li>
+        <li>Мобильные результаты хранятся отдельно от веб-аккаунта и не синхронизируются между устройствами.</li>
+      </ol>
+    </section>
+    <section class="help-section help-controls">
+      <h2>Настройки интерфейса</h2>
+      <ul>
+        <li>Кнопка «Тема» переключает светлый и тёмный режим; выбор запоминается.</li>
+        <li>Кнопка «Звук» включает или выключает звуковые эффекты.</li>
+        ${isOffline ? '<li>Напоминания — только локальные уведомления Android; в веб-браузере эта настройка недоступна.</li>' : '<li>В браузере доступны тема и звук; мобильные напоминания настраиваются только в Android-приложении.</li>'}
+      </ul>
+    </section>
+    <p class="offline-notice">${onlineMode}</p>`;
+  if (currentUser) {
+    bindWorkspaceTabs();
+    return;
+  }
+  document.querySelector('#help-back').addEventListener('click', () => {
+    navigateApp({ view: 'auth', mode: 'login' }, () => renderAuth());
+  });
 }
 
 function bindWorkspaceTabs() {
@@ -576,6 +629,8 @@ function bindWorkspaceTabs() {
         navigateApp({ view: 'theory' }, loadTheoryIndex);
       } else if (button.dataset.view === 'statistics') {
         navigateApp({ view: 'statistics' }, loadStatistics);
+      } else if (button.dataset.view === 'help') {
+        navigateApp({ view: 'help' }, renderHelp);
       } else {
         navigateApp({ view: 'tests', subject: 'python' }, () => loadDifficulties('python'));
       }
@@ -791,10 +846,14 @@ function renderAuth(mode = 'login', error = '') {
       ${error ? `<p class="error">${escapeHtml(error)}</p>` : ''}
       <button class="submit-button" type="submit">${register ? 'Зарегистрироваться' : 'Войти'}</button>
     </form>
-    <button class="auth-switch" id="auth-switch">${register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>`;
+    <button class="auth-switch" id="auth-switch">${register ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}</button>
+    <button class="auth-switch" id="open-help">Справка: как пользоваться</button>`;
   document.querySelector('#auth-switch').addEventListener('click', () => {
     const mode = register ? 'login' : 'register';
     navigateApp({ view: 'auth', mode }, () => renderAuth(mode));
+  });
+  document.querySelector('#open-help').addEventListener('click', () => {
+    navigateApp({ view: 'help' }, renderHelp);
   });
   bindThemeToggle();
   document.querySelector('#auth-form').addEventListener('submit', async (event) => {
