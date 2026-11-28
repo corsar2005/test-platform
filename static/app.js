@@ -605,7 +605,10 @@ function renderCompiler() {
           <button type="button" class="submit-button" id="compiler-run">▶ Запустить</button>
         </div>
       </div>
-      <textarea class="compiler-editor" id="compiler-editor" aria-label="Исходный код на Python" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" wrap="off"></textarea>
+      <div class="compiler-editor-shell">
+        <pre class="compiler-editor-highlight" aria-hidden="true"><code id="compiler-highlight-code"></code></pre>
+        <textarea class="compiler-editor" id="compiler-editor" aria-label="Исходный код на Python" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false" wrap="off"></textarea>
+      </div>
       <div class="compiler-output-panel">
         <div class="compiler-output-heading">
           <strong>Консоль</strong>
@@ -618,11 +621,21 @@ function renderCompiler() {
 
   const editor = document.querySelector('#compiler-editor');
   const output = document.querySelector('#compiler-output');
+  const highlightedCode = document.querySelector('#compiler-highlight-code');
+  const highlightLayer = highlightedCode.parentElement;
   const savedCode = localStorage.getItem(COMPILER_CODE_STORAGE_KEY);
   editor.value = savedCode === null ? COMPILER_STARTER_CODE : savedCode;
+  const updateHighlight = () => {
+    highlightedCode.innerHTML = Prism.highlight(editor.value, Prism.languages.python, 'python');
+    highlightLayer.scrollTop = editor.scrollTop;
+    highlightLayer.scrollLeft = editor.scrollLeft;
+  };
+  updateHighlight();
   editor.addEventListener('input', () => {
     localStorage.setItem(COMPILER_CODE_STORAGE_KEY, editor.value);
+    updateHighlight();
   });
+  editor.addEventListener('scroll', updateHighlight);
   editor.addEventListener('keydown', (event) => {
     if (event.key === 'Tab') {
       event.preventDefault();

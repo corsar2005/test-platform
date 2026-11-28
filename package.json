@@ -2,6 +2,7 @@
   "name": "python-test-lab-browser-runtime",
   "private": true,
   "devDependencies": {
+    "prismjs": "1.30.0",
     "skulpt": "1.2.0"
   }
 }
